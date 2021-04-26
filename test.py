@@ -17,4 +17,3 @@ mse_loss = (e-label)**2
 
 print(mse_loss)
 print(mse_loss.value)
-
