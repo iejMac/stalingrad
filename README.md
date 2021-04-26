@@ -1,2 +1,2 @@
 # stalingrad
-my deep learning framework
+our deep learning framework
