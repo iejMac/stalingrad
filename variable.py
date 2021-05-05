@@ -2,9 +2,10 @@ import numpy as np
 
 class Variable:
   def __init__(self, value, name="", local_grads={}):
+    self.grad = 0
+    self.name = name
     self.value = float(value)
     self.local_grads = local_grads
-    self.name = name
   def __repr__(self):
     return f'Variable "{self.name}"'
   def __neg__(self):
@@ -22,10 +23,19 @@ class Variable:
   def __pow__(self, x):
     return pow(self, x)
 
+  # Calculates d(self)/d(child) for all child variables
+  def backprop(self, root=False):
+    #TODO: code this with taste, no ifs
+    if root:
+      self.grad = 1
+    for child_var in self.local_grads:
+      child_var.grad += self.grad * self.local_grads[child_var]
+      child_var.backprop()
+
 def handle_number(func):
   def inner(x, y):
     if not isinstance(y, Variable):
-      return func(x, Variable(float(y), "constant"))
+      return func(x, Variable(float(y), f"{y}"))
     return func(x, y)
   return inner
 
@@ -51,7 +61,6 @@ def mul(x: Variable, y: Variable) -> Variable:
   })
 @handle_number
 def pow(x: Variable, y: Variable) -> Variable:
-  print(x.value)
   return Variable(x.value ** y.value, f"({x.name}^{y.name})", {
     x: y.value * (x.value ** (y.value - 1.0)),
     y: np.log(x.value) * (x.value ** y.value)
