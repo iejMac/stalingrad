@@ -31,6 +31,13 @@ class Variable:
       child_var.grad += self.grad * self.local_grads[child_var]
       child_var.backprop(False)
 
+  # Recursively clears all gradients in computation graph
+  def zero_grad(self):
+    self.grad = 0
+    for child_var in self.local_grads:
+      if child_var.grad != 0:
+        child_var.zero_grad()
+
 def handle_number(func):
   def inner(x, y):
     if not isinstance(y, Variable):

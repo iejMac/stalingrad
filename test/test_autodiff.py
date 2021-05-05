@@ -19,9 +19,12 @@ class TestAutodiff(unittest.TestCase):
     self.assertEqual(mse_loss.value, 121.0)
 
     mse_loss.backprop()
-
     self.assertEqual(a.grad, -66.0)
     self.assertEqual(b.grad, 176.0)
+
+    mse_loss.zero_grad()
+    self.assertEqual(a.grad, 0.0)
+    self.assertEqual(b.grad, 0.0)
 
 if __name__ == "__main__":
   unittest.main()
