@@ -24,13 +24,12 @@ class Variable:
     return pow(self, x)
 
   # Calculates d(self)/d(child) for all child variables
-  def backprop(self, root=False):
-    #TODO: code this with taste, no ifs
+  def backprop(self, root=True):
     if root:
       self.grad = 1
     for child_var in self.local_grads:
       child_var.grad += self.grad * self.local_grads[child_var]
-      child_var.backprop()
+      child_var.backprop(False)
 
 def handle_number(func):
   def inner(x, y):
