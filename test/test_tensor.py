@@ -52,7 +52,6 @@ class TestTensor(unittest.TestCase):
 
       h1 = x @ w1
       h2 = h1 @ w2
-      print(h2)
       loss = (h2 - y)**2
 
       cumulative_loss += loss.data

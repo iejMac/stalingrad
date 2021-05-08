@@ -3,8 +3,8 @@ name: Unit Test
 on: [push, pull_request]
 
 jobs:
-  testautodiff:
-    name: Autodiff Test
+  teststalingrad:
+    name: Stalingrad Test
     runs-on: ubuntu-latest
 
     steps:
