@@ -52,12 +52,12 @@ class Tensor:
 
 def neg(x: Tensor) -> Tensor:
   return Tensor((-1.0) * x.data, {
-    x: (-1.0) * np.ones(x.shape)
+    x: (-1.0) * (x.data != 0.0).astype(np.float32)
   })
 def add(x: Tensor, y: Tensor) -> Tensor:
   return Tensor(x.data + y.data, {
-    x: np.ones(x.shape),
-    y: np.ones(y.shape)
+    x: (x.data != 0.0).astype(np.float32)
+    y: (y.data != 0.0).astype(np.float32)
   })
 def matmul(x: Tensor, y: Tensor) -> Tensor:
   return Tensor(np.matmul(x.data, y.data), {
