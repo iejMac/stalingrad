@@ -56,7 +56,7 @@ def neg(x: Tensor) -> Tensor:
   })
 def add(x: Tensor, y: Tensor) -> Tensor:
   return Tensor(x.data + y.data, {
-    x: (x.data != 0.0).astype(np.float32)
+    x: (x.data != 0.0).astype(np.float32),
     y: (y.data != 0.0).astype(np.float32)
   })
 def matmul(x: Tensor, y: Tensor) -> Tensor:
