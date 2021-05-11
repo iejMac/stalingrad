@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+import stalingrad.functional as F
 from stalingrad.tensor import Tensor
 
 np.random.seed(0)
@@ -31,7 +32,9 @@ class TestTensor(unittest.TestCase):
 
         # Forward pass:
         h1 = x @ w1
+        h1 = F.relu(h1)
         h2 = h1 @ w2
+        h2 = F.relu(h2)
         loss = (h2 - y)**2
 
         # Backward pass:
