@@ -16,7 +16,7 @@ jobs:
         python-version: 3.8
     - name: Install Dependencies
       run: python setup.py install
-    - name: Test Autodiff
+    - name: Test Variable
       run: python test/test_variable.py
     - name: Test Tensor
       run: python test/test_tensor.py
