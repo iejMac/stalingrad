@@ -17,6 +17,6 @@ jobs:
     - name: Install Dependencies
       run: python setup.py install
     - name: Test Autodiff
-      run: python test/test_autodiff.py
+      run: python test/test_variable.py
     - name: Test Tensor
       run: python test/test_tensor.py
