@@ -10,7 +10,3 @@ y = test(x)
 F.relu(y)
 
 y.backprop()
-
-
-
-
