@@ -25,7 +25,7 @@ class Dense(Module):
     self.weight = Tensor(np.random.uniform(-1., 1., size=self.shape)/np.sqrt(np.prod(self.shape)).astype(np.float32))
     self.bias = None
     if use_bias:
-      self.bias = Tensor(np.random.uniform(-1., 1., (out_neurons, 1)))
+      self.bias = Tensor(np.random.uniform(-1., 1., (1, out_neurons)))
 
   def forward(self, x):
     result = x @ self.weight
