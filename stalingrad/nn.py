@@ -8,7 +8,15 @@ class Module:
     return self.forward(x)
   def forward(self, x):
     return x
-
+  def parameters(self):
+    params = {}
+    for attr in self.__dict__:
+      if isinstance(self.__dict__[attr], Tensor):
+        params[attr] = self.__dict__[attr]
+      elif isinstance(self.__dict__[attr], Module):
+        params.update(self.__dict__[attr].parameters())
+    return params
+  
 class Dense(Module):
   def __init__(self, in_neurons, out_neurons, use_bias=True):
     self.use_bias = use_bias
