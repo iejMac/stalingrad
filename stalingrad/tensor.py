@@ -2,11 +2,12 @@ import numpy as np
 
 # Tensor version of Variable
 class Tensor:
-  def __init__(self, data, local_grads={}, name=""):
+  def __init__(self, data, local_grads={}, requires_grad=True, name=""):
     self.data = data
     self.name = name
     self.local_grads = local_grads
-    self.grad = np.zeros(self.shape)
+    self.requires_grad = requires_grad
+    self.grad = np.zeros(self.shape) if requires_grad else None
 
   @property
   def shape(self):
@@ -33,22 +34,20 @@ class Tensor:
   def backprop(self, root=True):
     if root == True:
       self.grad = np.ones(self.shape)
-
-    # TODO: hack, swap order for matmul dim balancing
-    swap = False
-    for child_tensor in self.local_grads:
-      if swap is False:
-        child_tensor.grad += self.grad @ self.local_grads[child_tensor]
-      else:
-        child_tensor.grad += self.local_grads[child_tensor] @ self.grad
-      child_tensor.backprop(False)
-      swap = True
+    
+    if self.requires_grad:
+      # TODO: hack, swap order for matmul dim balancing
+      swap = False
+      for child_tensor in self.local_grads:
+        if swap is False:
+          child_tensor.grad += self.grad @ self.local_grads[child_tensor]
+        else:
+          child_tensor.grad += self.local_grads[child_tensor] @ self.grad
+        child_tensor.backprop(False)
+        swap = True
 
   def zero_grad(self):
     self.grad = np.zeros(self.shape)
-    for child_tensor in self.local_grads:
-      if np.any(child_tensor.grad != 0):
-        child_tensor.zero_grad()
 
 def neg(x: Tensor) -> Tensor:
   return Tensor((-1.0) * x.data, {
