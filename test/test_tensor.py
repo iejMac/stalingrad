@@ -42,6 +42,12 @@ class TestTensor(unittest.TestCase):
         w2.data -= lr * w2.grad
 
         loss.zero_grad()
+        x.zero_grad()
+        y.zero_grad()
+        w1.zero_grad()
+        w2.zero_grad()
+        h1.zero_grad()
+        h2.zero_grad()
 
     # Test:
     cumulative_loss = 0.0
@@ -53,6 +59,7 @@ class TestTensor(unittest.TestCase):
       h1 = x @ w1
       h2 = h1 @ w2
       loss = (h2 - y)**2
+      print(loss)
 
       cumulative_loss += loss.data
 
