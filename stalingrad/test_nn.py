@@ -21,4 +21,5 @@ x = Tensor(np.random.uniform(size=(1, 784)))
 model = TestNetwork()
 y = model(x)
 
-print(model.parameters().keys())
+print(y)
+

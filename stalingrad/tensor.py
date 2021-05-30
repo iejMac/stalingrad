@@ -16,8 +16,7 @@ class Tensor:
   def dtype(self):
     return self.data.dtype
   def __repr__(self):
-    #TODO: make this say Tensor(...) instead of array(...)
-    return np.array_repr(self.data)
+    return np.array_repr(self.data).replace("array", "Tensor")
 
   def assign(self, x):
     self.data = x.data
