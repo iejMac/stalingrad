@@ -8,13 +8,13 @@ class Module:
     return self.forward(x)
   def forward(self, x):
     return x
-  def parameters(self):
+  def parameters(self, parent="root"):
     params = {}
     for attr in self.__dict__:
       if isinstance(self.__dict__[attr], Tensor):
-        params[attr] = self.__dict__[attr]
+        params[parent + "." + attr] = self.__dict__[attr]
       elif isinstance(self.__dict__[attr], Module):
-        params.update(self.__dict__[attr].parameters())
+        params.update(self.__dict__[attr].parameters(parent + "." + attr))
     return params
   
 class Dense(Module):

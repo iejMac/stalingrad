@@ -7,8 +7,8 @@ class TestNetwork(nn.Module):
   def __init__(self):
     super().__init__()
 
-    self.l1 = nn.Dense(784, 100)
-    self.l2 = nn.Dense(100, 10)
+    self.l1 = nn.Dense(784, 100, use_bias=True)
+    self.l2 = nn.Dense(100, 10, use_bias=True)
 
   def forward(self, x):
     x = self.l1(x)
@@ -21,5 +21,4 @@ x = Tensor(np.random.uniform(size=(1, 784)))
 model = TestNetwork()
 y = model(x)
 
-print(y)
-
+print(model.parameters().keys())
