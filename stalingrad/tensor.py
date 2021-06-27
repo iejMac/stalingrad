@@ -1,13 +1,16 @@
+import inspect
 import numpy as np
+
+from collections import defaultdict
 
 # Tensor version of Variable
 class Tensor:
-  def __init__(self, data, local_grads={}, requires_grad=True, name=""):
+  def __init__(self, data, requires_grad=True, name=""):
     self.data = data
     self.name = name
-    self.local_grads = local_grads
     self.requires_grad = requires_grad
     self.grad = np.zeros(self.shape) if requires_grad else None
+    self.func = None # Function that created the Tensor
 
   @property
   def shape(self):
@@ -17,52 +20,50 @@ class Tensor:
     return self.data.dtype
   def __repr__(self):
     return np.array_repr(self.data).replace("array", "Tensor")
-
   def assign(self, x):
     self.data = x.data
 
-  def __matmul__(self, x):
-    return matmul(self, x)
-  def __add__(self, x):
-    return add(self, x)
-  def __sub__(self, x):
-    return add(self, neg(x))
-  def __pow__(self, x):
-    return pow(self, x)
+  def backward(self, passed_grad=None):
+    if self.func is None:
+      return
 
-  def backprop(self, root=True):
-    if root == True:
-      self.grad = np.ones(self.shape)
+    if passed_grad is None: # root call
+      self.grad += np.ones(self.shape, dtype=self.dtype) # df/df = 1
+      passed_grad = self.grad
+
+    grads = self.func.backward(self.func, passed_grad)
+    grads = grads if len(self.func.parents) > 1 else [grads]
     
-    if self.requires_grad:
-      # TODO: hack, swap order for matmul dim balancing
-      swap = False
-      for child_tensor in self.local_grads:
-        if swap is False:
-          child_tensor.grad += self.grad @ self.local_grads[child_tensor]
-        else:
-          child_tensor.grad += self.local_grads[child_tensor] @ self.grad
-        child_tensor.backprop(False)
-        swap = True
+    for p, g in zip(self.func.parents, grads):
+      p.grad += g
+      p.backward(passed_grad)
 
-  def zero_grad(self):
-    self.grad = np.zeros(self.shape)
+class Function:
+  def __new__(cls, *args, **kwargs):
+    cls.forward = staticmethod(cls.forward)
+    cls.backward = staticmethod(cls.backward)
+    return super().__new__(cls)
 
-def neg(x: Tensor) -> Tensor:
-  return Tensor((-1.0) * x.data, {
-    x: (-1.0) * (x.data != 0.0).astype(np.float32)
-  })
-def add(x: Tensor, y: Tensor) -> Tensor:
-  return Tensor(x.data + y.data, {
-    x: (x.data != 0.0).astype(np.float32),
-    y: (y.data != 0.0).astype(np.float32)
-  })
-def matmul(x: Tensor, y: Tensor) -> Tensor:
-  return Tensor(np.matmul(x.data, y.data), {
-    x: y.data.T,
-    y: x.data.T
-  })
-def pow(x: Tensor, y) -> Tensor:
-  return Tensor(x.data**y, {
-    x: y * x.data**(y-1)
-  })
+  def __init__(self, *tensors):
+    self.parents = tensors
+    self.saved_tensors = []
+
+  def save_tensors(self, *tensors):
+    self.saved_tensors.extend(tensors)
+
+  def apply(self, *x):
+    func = self(*x)
+    ret = Tensor(self.forward(func, *[t.data for t in x]),
+                 requires_grad=any([t.requires_grad for t in x]))
+    if ret.requires_grad:
+      ret.func = func
+    return ret
+    
+def register_operations(namespace):
+  for name, cls in inspect.getmembers(namespace, inspect.isclass)[1:]:
+    def compute(*x):
+      return cls.apply(cls, *x)
+    setattr(Tensor, name.lower(), compute)
+   
+import functions
+register_operations(functions)
