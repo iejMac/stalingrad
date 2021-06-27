@@ -8,3 +8,9 @@ class ReLU(Function):
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
     return passed_grad * (x >= 0)
+
+class Add(Function):
+  def forward(func, x, y):
+    return x+y
+  def backward(func, passed_grad):
+    return passed_grad, passed_grad

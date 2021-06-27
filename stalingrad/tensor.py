@@ -3,7 +3,6 @@ import numpy as np
 
 from collections import defaultdict
 
-# Tensor version of Variable
 class Tensor:
   def __init__(self, data, requires_grad=True, name=""):
     self.data = data
@@ -51,19 +50,25 @@ class Function:
   def save_tensors(self, *tensors):
     self.saved_tensors.extend(tensors)
 
-  def apply(self, *x):
+  def apply(self, *x, **kwargs):
     func = self(*x)
-    ret = Tensor(self.forward(func, *[t.data for t in x]),
+    ret = Tensor(self.forward(func, *[t.data for t in x], **kwargs),
                  requires_grad=any([t.requires_grad for t in x]))
     if ret.requires_grad:
       ret.func = func
     return ret
     
-def register_operations(namespace):
-  for name, cls in inspect.getmembers(namespace, inspect.isclass)[1:]:
-    def compute(*x):
-      return cls.apply(cls, *x)
-    setattr(Tensor, name.lower(), compute)
-   
+def register_operations(name, func):
+  def compute(*x, **kwargs):
+    return func.apply(func, *x, **kwargs)
+  setattr(Tensor, name, compute)
+  if name in ["add", "sub", "mul", "matmul", "pow"]:
+    setattr(Tensor, f"__{name}__", compute)
+
+def _register_operations(namespace):
+  for name, cls in inspect.getmembers(namespace, inspect.isclass):
+    if name != "Function":
+      register_operations(name.lower(), cls)
+      
 import functions
-register_operations(functions)
+_register_operations(functions)

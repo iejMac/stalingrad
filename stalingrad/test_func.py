@@ -2,18 +2,15 @@ import numpy as np
 
 from tensor import Tensor
 
-x = Tensor(np.random.uniform(size=(3, 3)) - 0.5)
-print(x)
+x1 = Tensor(np.arange(3).astype(float))
+x2 = Tensor(np.ones(3)*-1)
 
-y = x.relu()
-print(y)
+y = x1 + x2
+z = y.relu()
 
-y.backward()
-print(x.grad)
+print(z)
+z.backward()
 
-
-# grad = y.func.backward(y.func, np.ones((3, 3)))
-# print(grad)
 
 '''    
 x1 = Tensor()
