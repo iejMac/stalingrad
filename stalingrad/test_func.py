@@ -2,15 +2,12 @@ import numpy as np
 
 from tensor import Tensor
 
-x1 = Tensor(np.arange(3).astype(float))
-x2 = Tensor(np.ones(3)*-1)
+x1 = Tensor(np.arange(3).reshape((3, 1)).astype(float))
+x2 = Tensor(np.ones((1, 3))*-1)
 
-y = x1 + x2
-z = y.relu()
+y_ = x1 @ x2
 
-print(z)
-z.backward()
-
+y_.backward()
 
 '''    
 x1 = Tensor()

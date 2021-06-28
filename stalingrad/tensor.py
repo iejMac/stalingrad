@@ -35,7 +35,7 @@ class Tensor:
     
     for p, g in zip(self.func.parents, grads):
       p.grad += g
-      p.backward(passed_grad)
+      p.backward(g)
 
 class Function:
   def __new__(cls, *args, **kwargs):

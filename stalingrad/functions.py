@@ -14,3 +14,33 @@ class Add(Function):
     return x+y
   def backward(func, passed_grad):
     return passed_grad, passed_grad
+
+class Sub(Function):
+  def forward(func, x, y):
+    return x-y
+  def backward(func, passed_grad):
+    return passed_grad, -passed_grad
+
+class Mul(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x*y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return y*passed_grad, x*passed_grad
+
+class Pow(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x**y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return y * (x**(y-1.0)) * passed_grad, (x**y) * np.log(x) * passed_grad
+
+class Matmul(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x @ y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
