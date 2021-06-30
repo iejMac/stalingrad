@@ -1,13 +1,9 @@
 import numpy as np
-from tensor import Tensor
+from stalingrad.tensor import Tensor
 
 class Module:
-  def __init__(self):
-    pass
   def __call__(self, x):
     return self.forward(x)
-  def forward(self, x):
-    return x
   def parameters(self, parent="root"):
     params = {}
     for attr in self.__dict__:
@@ -17,7 +13,7 @@ class Module:
         params.update(self.__dict__[attr].parameters(parent + "." + attr))
     return params
   
-class Dense(Module):
+class Linear(Module):
   def __init__(self, in_neurons, out_neurons, use_bias=True):
     self.use_bias = use_bias
     self.shape = (in_neurons, out_neurons)
