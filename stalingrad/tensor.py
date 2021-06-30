@@ -34,8 +34,9 @@ class Tensor:
     grads = grads if len(self.func.parents) > 1 else [grads]
     
     for p, g in zip(self.func.parents, grads):
-      p.grad += g
-      p.backward(g)
+      if p.requires_grad:
+        p.grad += g
+        p.backward(g)
 
 class Function:
   def __new__(cls, *args, **kwargs):
@@ -60,6 +61,7 @@ class Function:
     
 def register_operations(name, func):
   def compute(*x, **kwargs):
+    x = [Tensor(np.array([arg]), requires_grad=False) if not isinstance(arg, Tensor) else arg for arg in x]
     return func.apply(func, *x, **kwargs)
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
