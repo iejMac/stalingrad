@@ -2,18 +2,9 @@ import numpy as np
 
 from tensor import Tensor
 
-x1 = Tensor(np.arange(3).reshape((3, 1)).astype(float))
-x2 = Tensor(np.ones((1, 3))*-1)
-
-y_ = x1 @ x2
-
-l = y_ ** 2
-print(y_)
-print(l)
-l.backward()
-
-print(l.grad)
-
+# x1 = Tensor(np.arange(3).reshape((3, 1)).astype(float))
+# x2 = Tensor(np.ones((1, 3))*-1)
+# y_ = x1 @ x2
 
 '''    
 x1 = Tensor()
