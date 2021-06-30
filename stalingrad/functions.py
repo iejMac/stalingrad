@@ -1,5 +1,5 @@
 import numpy as np
-from tensor import Function
+from stalingrad.tensor import Function
 
 class ReLU(Function):
   def forward(func, x):

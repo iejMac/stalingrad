@@ -35,19 +35,19 @@ class TestTensor(unittest.TestCase):
         loss = (h2 - y)**2
 
         # Backward pass:
-        loss.backprop()
+        loss.backward()
 
         # Apply grads:
         w1.data -= lr * w1.grad
         w2.data -= lr * w2.grad
 
-        loss.zero_grad()
-        x.zero_grad()
-        y.zero_grad()
-        w1.zero_grad()
-        w2.zero_grad()
-        h1.zero_grad()
-        h2.zero_grad()
+        loss.grad = np.zeros(loss.shape)
+        x.grad = np.zeros(x.shape)
+        y.grad = np.zeros(y.shape)
+        w1.grad = np.zeros(w1.shape)
+        w2.grad = np.zeros(w2.shape)
+        h1.grad = np.zeros(h1.shape)
+        h2.grad = np.zeros(h2.shape)
 
     # Test:
     cumulative_loss = 0.0

@@ -72,5 +72,6 @@ def _register_operations(namespace):
     if name != "Function":
       register_operations(name.lower(), cls)
       
-import functions
+# import functions
+from stalingrad import functions
 _register_operations(functions)
