@@ -9,6 +9,14 @@ class ReLU(Function):
     x = func.saved_tensors[0]
     return passed_grad * (x >= 0)
 
+class Log(Function):
+  def forward(func, x):
+    func.save_tensors(x)
+    return np.log(x)
+  def backward(func, passed_grad):
+    x = func.saved_tensors[0]
+    return passed_grad * 1/x
+
 def unbroadcast(out, in_sh): # https://github.com/geohot/tinygrad/blob/master/tinygrad/ops_cpu.py (line 65)
   # It's possible to perform operations on tensors of different size f.e. Add((5, 5), (1, 5)) but for the backward
   # pass we need to remember to unbroadcast the output back to (1, 5)
