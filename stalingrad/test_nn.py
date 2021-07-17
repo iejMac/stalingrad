@@ -7,15 +7,19 @@ import optim
 x = Tensor(np.random.uniform(size=(1, 20)), requires_grad=False)
 labs = Tensor(np.ones(10).reshape((1, 10)), requires_grad=False)
 
+mse_loss = nn.MSE(reduction="mean", reduce_axis=None)
+
 d1 = nn.Linear(20, 10)
 op = optim.SGD(d1.parameters(), 0.1)
 y = d1(x)
 
-MSE = (y-labs)**2
-MSE_sum = MSE.sum()
-MSE_mean = MSE.mean()
+print(y)
+print(labs)
 
-MSE_sum.backward()
+loss = mse_loss(y, labs)
+print(loss)
+loss.backward()
+
 
 op.step()
 op.zero_grad()

@@ -1,6 +1,8 @@
 import numpy as np
 from stalingrad.tensor import Tensor
 
+# -= Modules =-
+
 class Module:
   def __call__(self, x):
     return self.forward(x)
@@ -28,3 +30,21 @@ class Linear(Module):
     if self.use_bias:
       result += self.bias
     return result
+
+# -= Losses =-
+
+class Loss(Module):
+  def __init__(self, reduction=None, reduce_axis=None):
+    self.reduction=reduction
+    self.reduce_axis = reduce_axis
+  def __call__(self, prediction, target):
+    loss = self.forward(prediction, target)
+    if self.reduction is not None:
+      loss = getattr(loss, self.reduction)(axis=self.reduce_axis)
+    return loss
+
+class MSE(Loss):
+  def __init__(self, reduction=None, reduce_axis=None):
+    super().__init__(reduction, reduce_axis)
+  def forward(self, prediction, target):
+    return (prediction - target)**2
