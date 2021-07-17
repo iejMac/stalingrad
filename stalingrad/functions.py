@@ -62,3 +62,13 @@ class Matmul(Function):
   def backward(func, passed_grad):
     x, y = func.saved_tensors
     return passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+
+class Sum(Function):
+  def forward(func, x, axis=None):
+    ax = (axis,) if isinstance(axis, int) else axis
+    func.save_tensors(x, ax)
+    return x.sum(axis=ax) if ax is not None else np.array([x.sum()])
+  def backward(func, passed_grad):
+    x, axis = func.saved_tensors
+    shape = [1 if (axis is None or ax in axis) else x.shape[ax] for ax in range(len(x.shape))]
+    return passed_grad.reshape(shape) + np.zeros_like(x)

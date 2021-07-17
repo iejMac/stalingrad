@@ -11,11 +11,10 @@ d1 = nn.Linear(20, 10)
 op = optim.SGD(d1.parameters(), 0.1)
 y = d1(x)
 
-# MSE = (y-labs)**2
-log = y.log() * -1.0
+MSE = (y-labs)**2
+MSE_sum = MSE.sum()
 
-# MSE.backward()
-log.backward()
+MSE_sum.backward()
 
 op.step()
 op.zero_grad()
