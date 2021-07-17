@@ -13,6 +13,7 @@ y = d1(x)
 
 MSE = (y-labs)**2
 MSE_sum = MSE.sum()
+MSE_mean = MSE.mean()
 
 MSE_sum.backward()
 

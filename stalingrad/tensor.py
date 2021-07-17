@@ -38,6 +38,11 @@ class Tensor:
         p.grad += g
         p.backward(g)
 
+  def mean(self, axis=None):
+    sm = self.sum(axis=axis)
+    mean = sm * (np.prod(sm.shape) / np.prod(self.shape))
+    return mean
+
 class Function:
   def __new__(cls, *args, **kwargs):
     cls.forward = staticmethod(cls.forward)
