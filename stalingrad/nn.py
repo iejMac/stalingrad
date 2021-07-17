@@ -34,7 +34,7 @@ class Linear(Module):
 # -= Losses =-
 
 class Loss(Module):
-  def __init__(self, reduction=None, reduce_axis=None):
+  def __init__(self, reduction=None, reduce_axis=0):
     self.reduction=reduction
     self.reduce_axis = reduce_axis
   def __call__(self, prediction, target):
@@ -44,7 +44,7 @@ class Loss(Module):
     return loss
 
 class MSE(Loss):
-  def __init__(self, reduction=None, reduce_axis=None):
+  def __init__(self, reduction=None, reduce_axis=0):
     super().__init__(reduction, reduce_axis)
   def forward(self, prediction, target):
     return (prediction - target)**2
