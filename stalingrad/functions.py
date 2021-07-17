@@ -17,6 +17,15 @@ class Log(Function):
     x = func.saved_tensors[0]
     return passed_grad * 1/x
 
+class Exp(Function):
+  def forward(func, x):
+    ret = np.exp(x)
+    func.save_tensors(ret) # d(e^x)/dx = e^x
+    return ret
+  def backward(func, passed_grad):
+    e_x = func.saved_tensors[0]
+    return passed_grad * e_x
+
 def unbroadcast(out, in_sh): # https://github.com/geohot/tinygrad/blob/master/tinygrad/ops_cpu.py (line 65)
   # It's possible to perform operations on tensors of different size f.e. Add((5, 5), (1, 5)) but for the backward
   # pass we need to remember to unbroadcast the output back to (1, 5)
