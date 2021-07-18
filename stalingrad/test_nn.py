@@ -12,7 +12,8 @@ nll_loss = nn.NLL(reduction="mean", reduce_axis=None)
 
 d1 = nn.Linear(20, 10)
 op = optim.SGD(d1.parameters(), 0.1)
-y = d1(x).sigmoid()
+y = d1(x).softmax()
+print(y.sum())
 
 print(y)
 print(labs)
