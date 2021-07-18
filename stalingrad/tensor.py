@@ -38,10 +38,18 @@ class Tensor:
         p.grad += g
         p.backward(g)
 
+  def div(self, x):
+    return self * (x**(-1.0))
+  __truediv__ = div
+
   def mean(self, axis=None):
     sm = self.sum(axis=axis)
     mean = sm * (np.prod(sm.shape) / np.prod(self.shape))
     return mean
+
+  def sigmoid(self):
+    e_x = self.exp()
+    return e_x / (e_x + 1)
 
 class Function:
   def __new__(cls, *args, **kwargs):

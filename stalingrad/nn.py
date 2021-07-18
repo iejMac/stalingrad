@@ -48,3 +48,9 @@ class MSE(Loss):
     super().__init__(reduction, reduce_axis)
   def forward(self, prediction, target):
     return (prediction - target)**2
+
+class NLL(Loss):
+  def __init__(self, reduction=None, reduce_axis=0):
+    super().__init__(reduction, reduce_axis)
+  def forward(self, prediction, target):
+    return target * prediction.log() * (-1.0)
