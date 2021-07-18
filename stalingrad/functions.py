@@ -81,3 +81,11 @@ class Sum(Function):
     x, axis = func.saved_tensors
     shape = [1 if (axis is None or ax in axis) else x.shape[ax] for ax in range(len(x.shape))]
     return passed_grad.reshape(shape) + np.zeros_like(x)
+
+class Reshape(Function):
+  def forward(func, x, shape=None):
+    func.save_tensors(x, shape)
+    return x.reshape(shape)
+  def backward(func, passed_grad):
+    x, _ = func.saved_tensors
+    return passed_grad.reshape(x.shape)

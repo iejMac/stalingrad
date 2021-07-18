@@ -48,9 +48,11 @@ class Tensor:
   def sigmoid(self):
     e_x = self.exp()
     return e_x / (e_x + 1)
-  def softmax(self):
+  def softmax(self, dist_axes=(1,)):
+    axis = (dist_axes,) if isinstance(dist_axes, int) else dist_axes
+    shape = [1 if ax in axis else self.shape[ax] for ax in range(len(self.shape))]
     e_x = self.exp()
-    return e_x / e_x.sum()
+    return e_x / (e_x.sum(axis=dist_axes).reshape(shape=shape))
 
 
 class Function:

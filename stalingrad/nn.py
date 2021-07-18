@@ -50,8 +50,9 @@ class MSE(Loss):
     return (prediction - target)**2
 
 class NLL(Loss):
-  def __init__(self, reduction=None, reduce_axis=(0, 1)):
-    # reduce axis is (0, 1) because we want to reduce across batch dimension and class dimension
+  def __init__(self, reduction=None, reduce_axis=0):
     super().__init__(reduction, reduce_axis)
   def forward(self, prediction, target):
-    return target * prediction.log() * (-1.0)
+    sum_axis = list(range(len(prediction.shape)))
+    sum_axis.remove(self.reduce_axis)
+    return (target * prediction.log() * (-1.0)).sum(axis=tuple(sum_axis))
