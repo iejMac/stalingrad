@@ -20,3 +20,5 @@ jobs:
       run: python test/test_variable.py
     - name: Test Tensor
       run: python test/test_tensor.py
+    - name: Test MNIST
+      run: python test/test_mnist.py
