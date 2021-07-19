@@ -1,10 +1,11 @@
 import unittest
-
 import numpy as np
 
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
+
+np.random.seed(80085)
 
 # mnist loader from : https://github.com/geohot/tinygrad/blob/master/test/test_mnist.py
 def fetch_mnist(flatten=False, one_hot=False):
