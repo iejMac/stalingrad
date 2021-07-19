@@ -68,7 +68,7 @@ class TestMNIST(unittest.TestCase):
 
     for i in range(len(Y_test)):
       lab, pred = np.argmax(Y_test[i]), np.argmax(preds[i].data)
-        correct += (lab == pred)
+      correct += (lab == pred)
     
     correct_pct = correct/len(Y_test)
     self.assertTrue(correct_pct > 0.95)
