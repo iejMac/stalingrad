@@ -21,6 +21,8 @@ class Tensor:
     return np.array_repr(self.data).replace("array", "Tensor")
   def assign(self, x):
     self.data = x.data
+  def __getitem__(self, i):
+    return Tensor(self.data.__getitem__(i), requires_grad=self.requires_grad)
 
   def backward(self, passed_grad=None):
     if self.func is None:
