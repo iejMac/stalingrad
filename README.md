@@ -3,7 +3,7 @@ our deep learning framework
 
 ## Setup:
 Clone stalingrad into your home directory and run the setup script:
-```
+```bash
 cd ~
 git clone https://github.com/iejMac/stalingrad.git
 cd stalingrad
@@ -12,7 +12,7 @@ python setup.py install
 
 ## Defining a model:
 Define a model using stalingrad's nn API and pre-defined tensor operations. All you need to do is implement the forward pass and stalingrad will handle the backward pass for you.
-```
+```python
 from stalingrad import nn
 class MyModel(nn.Module)
   def __init__(self, input_dim, hidden_dim, output_dim):
@@ -27,7 +27,7 @@ class MyModel(nn.Module)
 
 ## Training:
 Simple training loop example:
-```
+```python
 from stalingrad import nn
 from stalingrad import optim
 
