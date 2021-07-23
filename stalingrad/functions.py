@@ -89,3 +89,33 @@ class Reshape(Function):
   def backward(func, passed_grad):
     x, _ = func.saved_tensors
     return passed_grad.reshape(x.shape)
+
+class Conv2d(Function):
+  def forward(func, x, filters, stride=(1, 1), padding=(0, 0)):
+    padding = [padding] if isinstance(padding[0], int) else padding
+
+    np_pad = [padding.pop() if len(padding) > 0 else (0, 0) for _ in range(len(x.shape))]
+    np_pad.reverse()
+
+    output_shape = list(padded_x.shape)
+    padded_x = np.expand_dims(np.pad(x, np_pad), 1) # expand_dims so filter gets applied to all inputs properly
+    output_shape[-2] = int((padded_x.shape[-2] - filters.shape[1] + 1) / stride[0])
+    output_shape[-1] = int((padded_x.shape[-1] - filters.shape[2] + 1) / stride[1])
+    output_shape[0] *= filters.shape[0]
+
+    output = np.zeros(output_shape)
+
+    for o_row in range(output.shape[-1]):
+      for o_col in range(output.shape[-2]):
+        r0, c0 = o_row * stride[0] + int(filters.shape[1]/2), o_col*stride[1] + int(filters.shape[1]/2)
+        rn, cn = r0 + filters.shape[1], c0 + filters.shape[2]
+        output[:, o_row, o_col] = np.sum(x[:, :, r0:rn, c0:cn] * filters, (-2, -1)).flatten()
+
+    return output
+  def backward(func, passed_grad):
+    x, filters = func.saved_tensors
+    return passed_grad
+
+
+
+
