@@ -25,7 +25,7 @@ def fetch_mnist(flatten=False, one_hot=False):
 
   return X_train, Y_train, X_test, Y_test
 
-class MnistClassifier(nn.Module):
+class LinearMnistClassifier(nn.Module):
   def __init__(self):
     super().__init__()
     self.lin1 = nn.Linear(784, 100)
@@ -46,7 +46,7 @@ class TestMNIST(unittest.TestCase):
 
     X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=True, one_hot=True)
 
-    mnist_classifier = MnistClassifier()
+    mnist_classifier = LinearMnistClassifier()
     opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
 
