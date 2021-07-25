@@ -92,7 +92,16 @@ class Reshape(Function):
 
 class Conv2d(Function):
   def forward(func, x, filters, stride=(1, 1), padding=(0, 0)):
-    padding = [padding] if isinstance(padding[0], int) else padding
+    '''
+      stride - step size in x and y direction respectively as tuple
+      padding (zero padding):
+        int - symmetric padding on both axes
+        tuple - padding[0] zeros before, padding[1] zeros after on both axes
+        list of tuples - padding[0] for x axis, padding[1] for y axis
+    '''
+    padding = (padding, padding) if isinstance (padding, int) else padding
+    padding = [padding, padding] if isinstance(padding[0], int) else padding
+    func.save_tensors(stride, padding.copy())
 
     np_pad = [padding.pop() if len(padding) > 0 else (0, 0) for _ in range(len(x.shape))]
     np_pad.reverse()
@@ -105,7 +114,7 @@ class Conv2d(Function):
     output_shape[0] *= filters.shape[0]
     padded_x = np.expand_dims(padded_x, 1) # expand_dims so filter gets applied to all inputs properly
 
-    func.save_tensors(padded_x, filters, stride)
+    func.save_tensors(padded_x, filters)
 
     output = np.zeros(output_shape)
 
@@ -117,19 +126,17 @@ class Conv2d(Function):
 
     return output
   def backward(func, passed_grad):
-    padded_x, filters, stride = func.saved_tensors
+    stride, padding, padded_x, filters = func.saved_tensors
     d_filter = np.zeros_like(filters)
+    d_input = np.zeros_like(padded_x)
 
     for row in range(passed_grad.shape[-2]):
       for col in range(passed_grad.shape[-1]):
         loc_grads = passed_grad[:, row, col].reshape(padded_x.shape[0], filters.shape[0], 1, 1)
         r0, c0 = row * stride[0], col * stride[1]
         rn, cn = r0 + filters.shape[1], c0 + filters.shape[2]
-        loc_d_filter = np.sum(padded_x[:, :, r0:rn, c0:cn] * loc_grads, axis=0)
-        d_filter += loc_d_filter
+        d_filter += np.sum(padded_x[:, :, r0:rn, c0:cn] * loc_grads, axis=0)
+        d_input[:, :, r0:rn, c0:cn] += np.sum(filters * loc_grads, axis=1, keepdims=True)
 
-    return d_filter, None
-
-
-
-
+    d_input = d_input[:, 0, padding[1][0]:-padding[1][1], padding[0][0]:-padding[0][1]] # remove padding and extra dim
+    return d_input, d_filter
