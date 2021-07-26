@@ -91,24 +91,30 @@ class Reshape(Function):
     return passed_grad.reshape(x.shape)
 
 class Conv2d(Function):
-  def forward(func, x, filters, stride=(1, 1)):
+  def forward(func, x, kernels, stride=(1, 1), groups=1):
+    batch_size, in_ch, fil_y, fil_x = x.shape
+    out_ch, kern_count, kern_y, kern_x = kernels.shape
+    stride_y, stride_x = stride
+    out_y, out_x = (fil_y - kern_y + stride_y) // stride_y, (fil_x - kern_x + stride_x) // stride_x
 
-    output_shape = list(x.shape)
-    output_shape[-2] = int((x.shape[-2] - filters.shape[1] + 1) / stride[0])
-    output_shape[-1] = int((x.shape[-1] - filters.shape[2] + 1) / stride[1])
-    output_shape[0] *= filters.shape[0]
-    x = np.expand_dims(x, 1) # expand_dims so filter gets applied to all inputs properly
+    assert kern_count * groups == in_ch
+    assert out_ch % groups == 0 and in_ch % groups == 0
+    g_out_ch = out_ch // groups
 
-    func.save_tensors(x, filters, stride)
-    output = np.zeros(output_shape)
+    grouped_x = x.reshape(batch_size, groups, kern_count, fil_y, fil_x) # div x into groups
+    strided_x = np.lib.stride_tricks.as_strided(grouped_x,
+                                                shape=(batch_size, groups, kern_count, out_y, out_x, kern_y, kern_x),
+                                                strides=(*grouped_x.strides[0:3], grouped_x.strides[3]*stride_y, grouped_x.strides[4]*stride_x, *grouped_x.strides[3:5]),
+                                                writeable=False)
+    
+    grouped_kernels = kernels.reshape(groups, g_out_ch, kern_count, kern_y, kern_x)
+    output = np.zeros((batch_size, groups, g_out_ch, out_y, out_x))
 
-    for o_row in range(output.shape[-2]):
-      for o_col in range(output.shape[-1]):
-        r0, c0 = o_row * stride[0], o_col * stride[1]
-        rn, cn = r0 + filters.shape[1], c0 + filters.shape[2]
-        output[:, o_row, o_col] = np.sum(x[:, :, r0:rn, c0:cn] * filters, (-2, -1)).flatten()
+    for group in range(groups):
+      output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
 
-    return output
+    return output.reshape(batch_size, out_ch, out_y, out_x)
+
   def backward(func, passed_grad):
     x, filters, stride = func.saved_tensors
     d_filter = np.zeros_like(filters)
