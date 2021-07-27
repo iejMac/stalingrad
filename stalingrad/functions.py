@@ -101,13 +101,15 @@ class Conv2d(Function):
     assert out_ch % groups == 0 and in_ch % groups == 0
     g_out_ch = out_ch // groups
 
-    grouped_x = x.reshape(batch_size, groups, kern_count, fil_y, fil_x) # div x into groups
+    grouped_x = x.reshape(batch_size, groups, kern_count, fil_y, fil_x)
     strided_x = np.lib.stride_tricks.as_strided(grouped_x,
                                                 shape=(batch_size, groups, kern_count, out_y, out_x, kern_y, kern_x),
                                                 strides=(*grouped_x.strides[0:3], grouped_x.strides[3]*stride_y, grouped_x.strides[4]*stride_x, *grouped_x.strides[3:5]),
                                                 writeable=False)
     
     grouped_kernels = kernels.reshape(groups, g_out_ch, kern_count, kern_y, kern_x)
+
+    func.save_tensors(strided_x, grouped_kernels, x.shape)
     output = np.zeros((batch_size, groups, g_out_ch, out_y, out_x))
 
     for group in range(groups):
@@ -116,16 +118,22 @@ class Conv2d(Function):
     return output.reshape(batch_size, out_ch, out_y, out_x)
 
   def backward(func, passed_grad):
-    x, filters, stride = func.saved_tensors
-    d_filter = np.zeros_like(filters)
-    d_input = np.zeros_like(x)
+    batch_size, out_ch, out_y, out_x = passed_grad.shape
+    strided_x, grouped_kernels, x_shape = func.saved_tensors
+    groups, g_out_ch, kern_count, kern_y, kern_x = grouped_kernels.shape
+    _, in_ch, fil_y, fil_x = x_shape
 
-    for row in range(passed_grad.shape[-2]):
-      for col in range(passed_grad.shape[-1]):
-        loc_grads = passed_grad[:, row, col].reshape(x.shape[0], filters.shape[0], 1, 1)
-        r0, c0 = row * stride[0], col * stride[1]
-        rn, cn = r0 + filters.shape[1], c0 + filters.shape[2]
-        d_filter += np.sum(x[:, :, r0:rn, c0:cn] * loc_grads, axis=0)
-        d_input[:, :, r0:rn, c0:cn] += np.sum(filters * loc_grads, axis=1, keepdims=True)
+    d_kernels = np.zeros_like(grouped_kernels)
+    d_input = np.zeros((batch_size, groups, kern_count, fil_y, fil_x))
+    grouped_passed_grad = passed_grad.reshape(batch_size, groups, g_out_ch, out_y, out_x)
 
-    return d_input, d_filter
+    for group in range(groups):
+      d_kernels[group] += np.einsum('bkYXyx,boYX->okyx', strided_x[:, group], grouped_passed_grad[:, group])
+
+    for i in range(out_y):
+      for j in range(out_x):
+        for group in range(groups):
+          d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.einsum('bc,cgyx->bgyx', grouped_passed_grad[:, group, :, i, j], grouped_kernels[group])
+
+    
+    return d_input.reshape(batch_size, groups*kern_count, fil_y, fil_x), d_kernels.reshape(groups*g_out_ch, kern_count, kern_y, kern_x)
