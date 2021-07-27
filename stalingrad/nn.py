@@ -46,7 +46,7 @@ class Conv2d(Module):
     result = x.conv2d(self.kernels, stride=self.stride, groups=self.groups)
     if self.use_bias:
       if self.bias is None: # initialize bias after finding out output dim
-        self.bias = Tensor(np.random.uniform(-1., 1., result.shape))
+        self.bias = Tensor(np.random.uniform(-1., 1., size=(1, *result.shape[1:])))
       result += self.bias
     return result
     
