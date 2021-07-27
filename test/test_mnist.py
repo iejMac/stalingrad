@@ -38,17 +38,31 @@ class LinearMnistClassifier(nn.Module):
     x = self.lin3(x).softmax()
     return x
 
+class ConvolutionalMnistClassifier(nn.Module):
+  def __init__(self):
+    super().__init__()
+    self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1)
+    self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1)
+    self.conv3 = nn.Conv2d(32, 1, kernel_size=5, stride=1)
+    self.linear1 = nn.Linear(256, 10)
+  def forward(self, x):
+    x = self.conv1(x).relu()
+    x = self.conv2(x).relu()
+    x = self.conv3(x).relu()
+    x = x.reshape(shape=(x.shape[0], -1))
+    x = self.linear1(x).softmax()
+    return x
+
 class TestMNIST(unittest.TestCase):
   def test_linear_mnist(self):
     steps = 1000
     batch_size = 200
     lr = 1e-2
 
-    X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=True, one_hot=True)
-
     mnist_classifier = LinearMnistClassifier()
     opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
+    X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=True, one_hot=True)
 
     # train:
     for step in range(steps):
@@ -72,6 +86,44 @@ class TestMNIST(unittest.TestCase):
       correct += (lab == pred)
     
     correct_pct = correct/len(Y_test)
+    print(f"Linear MNIST Classifier test accuracy: {correct_pct}")
+    self.assertTrue(correct_pct > 0.95)
+
+  def test_convolutional_mnist(self):
+    steps = 1000
+    batch_size = 200
+    lr = 1e-2
+
+    mnist_classifier = ConvolutionalMnistClassifier()
+    opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
+    loss_func = nn.NLL(reduction="mean")
+    X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
+    X_train = np.expand_dims(X_train, 1)
+    X_test = np.expand_dims(X_test, 1)
+
+    # train:
+    for step in range(steps):
+      ind = np.random.randint(0, len(X_train), size=(batch_size))
+      X_batch = Tensor(X_train[ind], requires_grad=False)
+      Y_batch = Tensor(Y_train[ind], requires_grad=False)
+
+      probs = mnist_classifier(X_batch)
+      loss = loss_func(probs, Y_batch)
+
+      loss.backward()
+      opt.step()
+      opt.zero_grad()
+
+    #evaluate:
+    preds = mnist_classifier(Tensor(X_test, requires_grad=False))
+    correct = 0
+
+    for i in range(len(Y_test)):
+      lab, pred = np.argmax(Y_test[i]), np.argmax(preds[i].data)
+      correct += (lab == pred)
+    
+    correct_pct = correct/len(Y_test)
+    print(f"Convolutional MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
 
 if __name__ == "__main__":

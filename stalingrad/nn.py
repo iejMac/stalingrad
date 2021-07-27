@@ -36,7 +36,8 @@ class Conv2d(Module):
   def __init__(self, in_channels, out_channels, kernel_size=3, stride=(1, 1), padding="valid", groups=1, use_bias=True):
     self.use_bias = use_bias
     self.shape = (out_channels, in_channels, kernel_size, kernel_size)
-    self.stride, self.padding, self.groups = stride, padding, groups
+    self.stride = (stride, stride) if isinstance(stride, int) else stride
+    self.padding, self.groups = padding, groups
   
     self.kernels = Tensor(np.random.uniform(-1., 1., size=self.shape)/np.sqrt(np.prod(self.shape)).astype(np.float32))
     self.bias = None
