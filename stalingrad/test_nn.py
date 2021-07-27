@@ -12,5 +12,5 @@ out = conv1(imgs).relu()
 out = conv2(out).relu()
 out = conv3(out).relu()
 
-print(out.shape)
+out.backward()
 

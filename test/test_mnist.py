@@ -92,7 +92,7 @@ class TestMNIST(unittest.TestCase):
   def test_convolutional_mnist(self):
     steps = 1000
     batch_size = 200
-    lr = 1e-2
+    lr = 3e-4
 
     mnist_classifier = ConvolutionalMnistClassifier()
     opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
@@ -109,6 +109,7 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
+      print(loss)
 
       loss.backward()
       opt.step()

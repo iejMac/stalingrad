@@ -113,7 +113,8 @@ class Conv2d(Function):
     output = np.zeros((batch_size, groups, g_out_ch, out_y, out_x))
 
     for group in range(groups):
-      output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
+      # output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
+      output[:, group] += np.swapaxes(np.tensordot(strided_x[:, group], grouped_kernels[group], ((1, 4, 5), (1, 2, 3))), 1, 3)
 
     return output.reshape(batch_size, out_ch, out_y, out_x)
 
@@ -128,12 +129,13 @@ class Conv2d(Function):
     grouped_passed_grad = passed_grad.reshape(batch_size, groups, g_out_ch, out_y, out_x)
 
     for group in range(groups):
-      d_kernels[group] += np.einsum('bkYXyx,boYX->okyx', strided_x[:, group], grouped_passed_grad[:, group])
+      # d_kernels[group] += np.einsum('bkYXyx,boYX->okyx', strided_x[:, group], grouped_passed_grad[:, group])
+      d_kernels[group] += np.tensordot(grouped_passed_grad[:, group], strided_x[:, group], ((0, 2, 3), (0, 2, 3)))
 
     for i in range(out_y):
       for j in range(out_x):
         for group in range(groups):
-          d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.einsum('bc,cgyx->bgyx', grouped_passed_grad[:, group, :, i, j], grouped_kernels[group])
-
+          # d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.einsum('bc,cgyx->bgyx', grouped_passed_grad[:, group, :, i, j], grouped_kernels[group])
+          d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.tensordot(grouped_passed_grad[:, group, :, i, j], grouped_kernels[group], ((1,), (0,)))
     
     return d_input.reshape(batch_size, groups*kern_count, fil_y, fil_x), d_kernels.reshape(groups*g_out_ch, kern_count, kern_y, kern_x)
