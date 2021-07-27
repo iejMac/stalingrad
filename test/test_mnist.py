@@ -41,21 +41,21 @@ class LinearMnistClassifier(nn.Module):
 class ConvolutionalMnistClassifier(nn.Module):
   def __init__(self):
     super().__init__()
-    self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=1)
-    self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=1)
-    self.conv3 = nn.Conv2d(32, 1, kernel_size=5, stride=1)
-    self.linear1 = nn.Linear(256, 10)
+    self.conv1 = nn.Conv2d(1, 8, kernel_size=5, stride=1)
+    self.conv2 = nn.Conv2d(8, 16, kernel_size=5, stride=1)
+    self.conv3 = nn.Conv2d(16, 1, kernel_size=5, stride=1)
+    self.lin1 = nn.Linear(256, 10)
   def forward(self, x):
     x = self.conv1(x).relu()
     x = self.conv2(x).relu()
     x = self.conv3(x).relu()
     x = x.reshape(shape=(x.shape[0], -1))
-    x = self.linear1(x).softmax()
+    x = self.lin1(x).softmax()
     return x
 
 class TestMNIST(unittest.TestCase):
   def test_linear_mnist(self):
-    steps = 1000
+    steps = 500
     batch_size = 200
     lr = 1e-2
 
@@ -90,9 +90,10 @@ class TestMNIST(unittest.TestCase):
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 100
+    steps = 500
     batch_size = 200
-    lr = 3e-4
+    # batch_size = 10
+    lr = 1e-3
 
     mnist_classifier = ConvolutionalMnistClassifier()
     opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
@@ -110,6 +111,7 @@ class TestMNIST(unittest.TestCase):
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
       print(loss)
+      # print(mnist_classifier.parameters()["root.conv1.kernels"])
 
       loss.backward()
       opt.step()

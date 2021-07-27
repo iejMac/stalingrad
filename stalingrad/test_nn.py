@@ -2,15 +2,30 @@ import nn
 import numpy as np
 from stalingrad.tensor import Tensor
 
-imgs = Tensor(np.ones((10, 1, 28, 28)), requires_grad=True)
+dat = np.ones((1, 1, 5, 5))
+dat[0][0][1] *= 2
+dat[0][0][2] *= 3
+dat[0][0][3] *= 4
+dat[0][0][4] *= 5
 
-conv1 = nn.Conv2d(1, 4, 3)
-conv2 = nn.Conv2d(4, 8, 3)
-conv3 = nn.Conv2d(8, 1, 3)
+kern = np.ones((2, 1, 2, 2))
+kern[0][0] *= 10
+kern[1][0] *= -1
 
-out = conv1(imgs).relu()
-out = conv2(out).relu()
-out = conv3(out).relu()
+imgs = Tensor(dat, requires_grad=True)
+kernels = Tensor(kern, requires_grad=True)
+
+print(imgs)
+print(kernels)
+
+out = imgs.conv2d(kernels)
+print(out)
 
 out.backward()
+
+print(imgs.grad)
+print(kernels.grad)
+
+
+
 
