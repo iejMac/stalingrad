@@ -90,7 +90,7 @@ class TestMNIST(unittest.TestCase):
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 1000
+    steps = 100
     batch_size = 200
     lr = 3e-4
 
