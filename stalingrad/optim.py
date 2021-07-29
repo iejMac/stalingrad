@@ -20,8 +20,19 @@ class AdaGrad(Optimizer):
   def __init__(self, parameters, learning_rate=3e-4):
     super().__init__(parameters)
     self.learning_rate = learning_rate
-    self.accumulated_squared_grads = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+    self.accumulated_grads = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
   def step(self):
     for key, param in self.parameters.items():
-      self.accumulated_squared_grads[key] += param.grad ** 2
-      param.data -= (self.learning_rate / (self.accumulated_squared_grads[key]**0.5 + 1e-7)) * param.grad
+      self.accumulated_grads[key] += param.grad ** 2
+      param.data -= (self.learning_rate / (self.accumulated_grads[key]**0.5 + 1e-7)) * param.grad
+
+class RMSProp(Optimizer):
+  def __init__(self, parameters, learning_rate=3e-4, alpha=0.9):
+    super().__init__(parameters)
+    self.alpha = alpha
+    self.learning_rate = learning_rate
+    self.accumulated_grads = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+  def step(self):
+    for key, param in self.parameters.items():
+      self.accumulated_grads[key] = self.alpha * self.accumulated_grads[key] + (1 - self.alpha) * (param.grad ** 2)
+      param.data -= (self.learning_rate / ((self.accumulated_grads[key] + 1e-6)**0.5)) * param.grad

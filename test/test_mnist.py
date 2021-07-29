@@ -95,7 +95,8 @@ class TestMNIST(unittest.TestCase):
     lr = 1e-3
 
     mnist_classifier = ConvolutionalMnistClassifier()
-    opt = optim.AdaGrad(mnist_classifier.parameters(), learning_rate=lr)
+    # opt = optim.AdaGrad(mnist_classifier.parameters(), learning_rate=lr)
+    opt = optim.RMSProp(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
     X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
     X_train = np.expand_dims(X_train, 1)
