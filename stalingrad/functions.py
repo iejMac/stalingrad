@@ -90,6 +90,16 @@ class Reshape(Function):
     x, _ = func.saved_tensors
     return passed_grad.reshape(x.shape)
 
+class Pad(Function):
+  def forward(func, x, padding=None):
+    padding = (padding, padding) if isinstance(padding, int) else padding
+    padding = [padding for _ in range(len(x.shape))] if isinstance(padding, tuple) else padding
+    func.save_tensors(padding)
+    return np.pad(x, padding)
+  def backward(func, passed_grad):
+    padding, = func.saved_tensors
+    return passed_grad[tuple(slice(s, passed_grad.shape[i] - e) for i, (s, e) in enumerate(padding))]
+
 class Conv2d(Function):
   def forward(func, x, kernels, stride=(1, 1), groups=1):
     batch_size, in_ch, fil_y, fil_x = x.shape

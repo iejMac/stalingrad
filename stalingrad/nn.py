@@ -31,18 +31,33 @@ class Linear(Module):
       result += self.bias
     return result
 
-
 class Conv2d(Module):
-  def __init__(self, in_channels, out_channels, kernel_size=3, stride=(1, 1), padding="valid", groups=1, use_bias=True):
+  def __init__(self, in_channels, out_channels, kernel_size, stride=(1, 1), padding="valid", groups=1, use_bias=True):
+    '''
+      stride: kernel step size in y and x direction respectively
+      padding (zero padding):
+        int - pad width and height by padding
+        tuple - pad height by padding[0] and width by padding[1]
+    '''
+    self.groups = groups
     self.use_bias = use_bias
     self.shape = (out_channels, in_channels, kernel_size, kernel_size)
     self.stride = (stride, stride) if isinstance(stride, int) else stride
-    self.padding, self.groups = padding, groups
+
+    padding = (padding, padding) if isinstance(padding, int) else padding
+    padding = [(0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])] if isinstance(padding, tuple) else padding
+    self.padding = padding
   
     self.kernels = Tensor(np.random.uniform(-1., 1., size=self.shape)/np.sqrt(np.prod(self.shape)).astype(np.float32))
     self.bias = None
 
   def forward(self, x):
+    if self.padding == "same":
+      y_pad = (x.shape[-2] * self.stride[0] - x.shape[-2] - self.stride[0] + self.kernels.shape[-2] ) // 2
+      x_pad = (x.shape[-1] * self.stride[1] - x.shape[-1] - self.stride[1] + self.kernels.shape[-1] ) // 2
+      self.padding = [(0, 0), (0, 0), (y_pad, y_pad), (x_pad, x_pad)]
+    if self.padding != "valid":
+      x = x.pad(padding=self.padding)
     result = x.conv2d(self.kernels, stride=self.stride, groups=self.groups)
     if self.use_bias:
       if self.bias is None: # initialize bias after finding out output dim
@@ -50,24 +65,6 @@ class Conv2d(Module):
       result += self.bias
     return result
     
-'''
-  Notes for Conv2d module:
-
-    padding (zero padding):
-      int - symmetric padding on both axes
-      tuple - padding[0] zeros before, padding[1] zeros after on both axes
-      list of tuples - padding[0] for x axis, padding[1] for y axis
-
-    padding = (padding, padding) if isinstance (padding, int) else padding
-    padding = [padding, padding] if isinstance(padding[0], int) else padding
-    func.save_tensors(stride, padding.copy())
-
-    np_pad = [padding.pop() if len(padding) > 0 else (0, 0) for _ in range(len(x.shape))]
-    np_pad.reverse()
-
-    padded_x = np.pad(x, np_pad)
-'''
-
 # -= Losses =-
 
 class Loss(Module):
