@@ -36,3 +36,20 @@ class RMSProp(Optimizer):
     for key, param in self.parameters.items():
       self.accumulated_grads[key] = self.alpha * self.accumulated_grads[key] + (1 - self.alpha) * (param.grad ** 2)
       param.data -= (self.learning_rate / ((self.accumulated_grads[key] + 1e-6)**0.5)) * param.grad
+
+class Adam(Optimizer): # https://arxiv.org/pdf/1412.6980.pdf
+  def __init__(self, parameters, learning_rate=3e-4, beta1=0.9, beta2=0.999):
+    super().__init__(parameters)
+    self.t = 0
+    self.b1, self.b2 = beta1, beta2
+    self.learning_rate = learning_rate
+    self.acc_s = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+    self.acc_r = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+  def step(self):
+    self.t += 1
+    for key, param in self.parameters.items():
+      self.acc_s[key] = self.b1 * self.acc_s[key] + (1 - self.b1) * param.grad
+      self.acc_r[key] = self.b2 * self.acc_r[key] + (1 - self.b2) * (param.grad ** 2)
+      s_ = self.acc_s[key] / (1 - self.b1**self.t)
+      r_ = self.acc_r[key] / (1 - self.b2**self.t)
+      param.data -= (self.learning_rate * s_) / (r_**0.5 + 1e-8)
