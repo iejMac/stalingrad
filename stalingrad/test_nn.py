@@ -15,17 +15,6 @@ kern[1][0] *= -1
 imgs = Tensor(dat, requires_grad=True)
 kernels = Tensor(kern, requires_grad=True)
 
-print(imgs)
-print(kernels)
-
 out = imgs.conv2d(kernels)
-print(out)
-
 out.backward()
-
-print(imgs.grad)
-print(kernels.grad)
-
-
-
 

@@ -90,9 +90,8 @@ class TestMNIST(unittest.TestCase):
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 500
+    steps = 200
     batch_size = 200
-    # batch_size = 10
     lr = 1e-3
 
     mnist_classifier = ConvolutionalMnistClassifier()
@@ -110,8 +109,6 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
-      print(loss)
-      # print(mnist_classifier.parameters()["root.conv1.kernels"])
 
       loss.backward()
       opt.step()
