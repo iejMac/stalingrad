@@ -25,6 +25,8 @@ def fetch_mnist(flatten=False, one_hot=False):
 
   return X_train, Y_train, X_test, Y_test
 
+X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=True, one_hot=True)
+
 class LinearMnistClassifier(nn.Module):
   def __init__(self):
     super().__init__()
@@ -41,11 +43,12 @@ class LinearMnistClassifier(nn.Module):
 class ConvolutionalMnistClassifier(nn.Module):
   def __init__(self):
     super().__init__()
-    self.conv1 = nn.Conv2d(1, 8, kernel_size=5, stride=1)
-    self.conv2 = nn.Conv2d(8, 16, kernel_size=5, stride=1)
-    self.conv3 = nn.Conv2d(16, 1, kernel_size=5, stride=1)
-    self.lin1 = nn.Linear(256, 10)
+    self.conv1 = nn.Conv2d(1, 8, kernel_size=3, stride=1)
+    self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1)
+    self.conv3 = nn.Conv2d(16, 1, kernel_size=3, stride=1)
+    self.lin1 = nn.Linear(484, 10)
   def forward(self, x):
+    x = x.reshape(shape=(-1, 1, 28, 28))
     x = self.conv1(x).relu()
     x = self.conv2(x).relu()
     x = self.conv3(x).relu()
@@ -62,7 +65,6 @@ class TestMNIST(unittest.TestCase):
     mnist_classifier = LinearMnistClassifier()
     opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
-    X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=True, one_hot=True)
 
     # train:
     for step in range(steps):
@@ -72,7 +74,6 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
-      print(loss)
 
       loss.backward()
       opt.step()
@@ -89,7 +90,7 @@ class TestMNIST(unittest.TestCase):
     correct_pct = correct/len(Y_test)
     print(f"Linear MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
-'''
+
   def test_convolutional_mnist(self):
     steps = 100
     batch_size = 200
@@ -98,9 +99,7 @@ class TestMNIST(unittest.TestCase):
     mnist_classifier = ConvolutionalMnistClassifier()
     opt = optim.Adam(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
-    X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
-    X_train = np.expand_dims(X_train, 1)
-    X_test = np.expand_dims(X_test, 1)
+    # X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
 
     # train:
     for step in range(steps):
@@ -127,6 +126,6 @@ class TestMNIST(unittest.TestCase):
     correct_pct = correct/len(Y_test)
     print(f"Convolutional MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
-'''
+
 if __name__ == "__main__":
   unittest.main()
