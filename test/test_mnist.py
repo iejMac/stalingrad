@@ -109,6 +109,7 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
+      print(loss)
 
       loss.backward()
       opt.step()
