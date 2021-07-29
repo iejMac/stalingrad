@@ -99,7 +99,6 @@ class TestMNIST(unittest.TestCase):
     mnist_classifier = ConvolutionalMnistClassifier()
     opt = optim.Adam(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
-    # X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
 
     # train:
     for step in range(steps):
