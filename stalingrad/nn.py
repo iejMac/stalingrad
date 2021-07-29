@@ -66,8 +66,6 @@ class Conv2d(Module):
     np_pad.reverse()
 
     padded_x = np.pad(x, np_pad)
-
-
 '''
 
 # -= Losses =-

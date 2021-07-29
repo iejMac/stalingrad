@@ -110,14 +110,11 @@ class Conv2d(Function):
     grouped_kernels = kernels.reshape(groups, g_out_ch, kern_count, kern_y, kern_x)
 
     func.save_tensors(strided_x, grouped_kernels, x.shape)
-    # output = np.zeros((batch_size, groups, g_out_ch, out_y, out_x))
     output = np.zeros((batch_size, groups, out_y, out_x, g_out_ch))
     for group in range(groups):
       # output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
-      # output[:, group] += np.swapaxes(np.tensordot(strided_x[:, group], grouped_kernels[group], ((1, 4, 5), (1, 2, 3))), 1, 3)
       output[:, group] += np.tensordot(strided_x[:, group], grouped_kernels[group], ((1, 4, 5), (1, 2, 3)))
 
-    # return output.reshape(batch_size, out_ch, out_y, out_x)
     return np.moveaxis(output, 4, 2).reshape(batch_size, out_ch, out_y, out_x)
 
   def backward(func, passed_grad):

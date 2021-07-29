@@ -90,12 +90,12 @@ class TestMNIST(unittest.TestCase):
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 200
+    steps = 100
     batch_size = 200
     lr = 1e-3
 
     mnist_classifier = ConvolutionalMnistClassifier()
-    opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
+    opt = optim.AdaGrad(mnist_classifier.parameters(), learning_rate=lr)
     loss_func = nn.NLL(reduction="mean")
     X_train, Y_train, X_test, Y_test = fetch_mnist(flatten=False, one_hot=True)
     X_train = np.expand_dims(X_train, 1)
@@ -109,6 +109,7 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
+      print(loss)
 
       loss.backward()
       opt.step()
