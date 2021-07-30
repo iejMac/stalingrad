@@ -46,7 +46,7 @@ class ConvolutionalMnistClassifier(nn.Module):
     self.conv1 = nn.Conv2d(1, 8, kernel_size=3, stride=1)
     self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1)
     self.conv3 = nn.Conv2d(16, 1, kernel_size=3, stride=1)
-    self.lin1 = nn.Linear(784, 10)
+    self.lin1 = nn.Linear(484, 10)
   def forward(self, x):
     x = x.reshape(shape=(-1, 1, 28, 28))
     x = self.conv1(x).relu()
@@ -92,9 +92,9 @@ class TestMNIST(unittest.TestCase):
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 100
+    steps = 300
     batch_size = 200
-    lr = 1e-3
+    lr = 0.001
 
     mnist_classifier = ConvolutionalMnistClassifier()
     opt = optim.Adam(mnist_classifier.parameters(), learning_rate=lr)
@@ -108,7 +108,6 @@ class TestMNIST(unittest.TestCase):
 
       probs = mnist_classifier(X_batch)
       loss = loss_func(probs, Y_batch)
-      print(loss)
 
       loss.backward()
       opt.step()
