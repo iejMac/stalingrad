@@ -119,7 +119,7 @@ class Conv2d(Function):
     
     grouped_kernels = kernels.reshape(groups, g_out_ch, kern_count, kern_y, kern_x)
 
-    func.save_tensors(strided_x, grouped_kernels, x.shape)
+    func.save_tensors(strided_x, grouped_kernels, x.shape, stride)
     output = np.zeros((batch_size, groups, out_y, out_x, g_out_ch))
     for group in range(groups):
       # output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
@@ -129,9 +129,10 @@ class Conv2d(Function):
 
   def backward(func, passed_grad):
     batch_size, out_ch, out_y, out_x = passed_grad.shape
-    strided_x, grouped_kernels, x_shape = func.saved_tensors
+    strided_x, grouped_kernels, x_shape, stride = func.saved_tensors
     groups, g_out_ch, kern_count, kern_y, kern_x = grouped_kernels.shape
     _, in_ch, fil_y, fil_x = x_shape
+    stride_y, stride_x = stride
 
     d_kernels = np.zeros_like(grouped_kernels)
     d_input = np.zeros((batch_size, groups, kern_count, fil_y, fil_x))
@@ -145,6 +146,12 @@ class Conv2d(Function):
       for j in range(out_x):
         for group in range(groups):
           # d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.einsum('bc,cgyx->bgyx', grouped_passed_grad[:, group, :, i, j], grouped_kernels[group])
-          d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.tensordot(grouped_passed_grad[:, group, :, i, j], grouped_kernels[group], ((1,), (0,)))
+          d_input[:, group, :, i*stride_y:i*stride_y+kern_y, j*stride_x:j*stride_x+kern_x] += np.tensordot(grouped_passed_grad[:, group, :, i, j], grouped_kernels[group], ((1,), (0,)))
     
     return d_input.reshape(batch_size, groups*kern_count, fil_y, fil_x), d_kernels.reshape(groups*g_out_ch, kern_count, kern_y, kern_x)
+
+class ConvTranspose2d(Function):
+  def forward(func, x, kernels):
+    return x
+  def backward(func, passed_grad):
+    return passed_grad
