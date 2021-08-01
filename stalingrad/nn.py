@@ -38,6 +38,9 @@ class Conv2d(Module):
       padding (zero padding):
         int - pad width and height by padding
         tuple - pad height by padding[0] and width by padding[1]
+        string :
+          "valid" - no padding
+          "same" - padding that keeps feature map same size
     '''
     self.groups = groups
     self.use_bias = use_bias
@@ -64,7 +67,20 @@ class Conv2d(Module):
         self.bias = Tensor(np.random.uniform(-1., 1., size=(1, *result.shape[1:])))
       result += self.bias
     return result
-    
+
+class ConvTranspose2d(Conv2d):
+  def __init__(self, in_channels, out_channels, kernel_size, stride=(1, 1), padding="valid", groups=1, use_bias=True):
+    super().__init__(in_channels, out_channels, kernel_size, stride, padding, groups, use_bias)
+  def forward(self, x):
+    if self.padding != "valid":
+      x = x.pad(padding=self.padding)
+    result = x.convtranspose2d(self.kernels, stride=self.stride, groups=self.groups)
+    if self.use_bias:
+      if self.bias is None:
+        self.bias = Tensor(np.random.uniform(-1., 1., size=(1, *result.shape[1:])))
+      result += self.bias
+    return result
+
 # -= Losses =-
 
 class Loss(Module):
