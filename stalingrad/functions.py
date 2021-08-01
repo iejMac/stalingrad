@@ -102,27 +102,26 @@ class Pad(Function):
 
 class Conv2d(Function):
   def forward(func, x, kernels, stride=(1, 1), groups=1):
-    batch_size, in_ch, fil_y, fil_x = x.shape
-    out_ch, kern_count, kern_y, kern_x = kernels.shape
+    batch_size, in_ch, in_y, in_x = x.shape
+    out_ch, k_in_ch, kern_y, kern_x = kernels.shape
     stride_y, stride_x = stride
-    out_y, out_x = (fil_y - kern_y + stride_y) // stride_y, (fil_x - kern_x + stride_x) // stride_x
+    out_y, out_x = (in_y - kern_y + stride_y) // stride_y, (in_x - kern_x + stride_x) // stride_x
 
-    assert kern_count * groups == in_ch
+    assert k_in_ch * groups == in_ch
     assert out_ch % groups == 0 and in_ch % groups == 0
     g_out_ch = out_ch // groups
 
-    grouped_x = x.reshape(batch_size, groups, kern_count, fil_y, fil_x)
+    grouped_x = x.reshape(batch_size, groups, k_in_ch, in_y, in_x)
     strided_x = np.lib.stride_tricks.as_strided(grouped_x,
-                                                shape=(batch_size, groups, kern_count, out_y, out_x, kern_y, kern_x),
+                                                shape=(batch_size, groups, k_in_ch, out_y, out_x, kern_y, kern_x),
                                                 strides=(*grouped_x.strides[0:3], grouped_x.strides[3]*stride_y, grouped_x.strides[4]*stride_x, *grouped_x.strides[3:5]),
                                                 writeable=False)
     
-    grouped_kernels = kernels.reshape(groups, g_out_ch, kern_count, kern_y, kern_x)
+    grouped_kernels = kernels.reshape(groups, g_out_ch, k_in_ch, kern_y, kern_x)
 
     func.save_tensors(strided_x, grouped_kernels, x.shape, stride)
     output = np.zeros((batch_size, groups, out_y, out_x, g_out_ch))
     for group in range(groups):
-      # output[:, group] += np.einsum('bkYXyx,okyx->boYX', strided_x[:, group], grouped_kernels[group])
       output[:, group] += np.tensordot(strided_x[:, group], grouped_kernels[group], ((1, 4, 5), (1, 2, 3)))
 
     return np.moveaxis(output, 4, 2).reshape(batch_size, out_ch, out_y, out_x)
@@ -130,28 +129,66 @@ class Conv2d(Function):
   def backward(func, passed_grad):
     batch_size, out_ch, out_y, out_x = passed_grad.shape
     strided_x, grouped_kernels, x_shape, stride = func.saved_tensors
-    groups, g_out_ch, kern_count, kern_y, kern_x = grouped_kernels.shape
-    _, in_ch, fil_y, fil_x = x_shape
+    groups, g_out_ch, k_in_ch, kern_y, kern_x = grouped_kernels.shape
+    _, in_ch, in_y, in_x = x_shape
     stride_y, stride_x = stride
 
     d_kernels = np.zeros_like(grouped_kernels)
-    d_input = np.zeros((batch_size, groups, kern_count, fil_y, fil_x))
+    d_input = np.zeros((batch_size, groups, k_in_ch, in_y, in_x))
     grouped_passed_grad = passed_grad.reshape(batch_size, groups, g_out_ch, out_y, out_x)
 
     for group in range(groups):
-      # d_kernels[group] += np.einsum('bkYXyx,boYX->okyx', strided_x[:, group], grouped_passed_grad[:, group])
       d_kernels[group] += np.tensordot(grouped_passed_grad[:, group], strided_x[:, group], ((0, 2, 3), (0, 2, 3)))
 
-    for i in range(out_y):
-      for j in range(out_x):
+    for r in range(out_y):
+      for c in range(out_x):
         for group in range(groups):
-          # d_input[:, group, :, i:i+kern_y, j:j+kern_x] += np.einsum('bc,cgyx->bgyx', grouped_passed_grad[:, group, :, i, j], grouped_kernels[group])
-          d_input[:, group, :, i*stride_y:i*stride_y+kern_y, j*stride_x:j*stride_x+kern_x] += np.tensordot(grouped_passed_grad[:, group, :, i, j], grouped_kernels[group], ((1,), (0,)))
+          r0, c0 = r * stride_y, c * stride_x
+          d_input[:, group, :, r0:r0+kern_y, c0:c0+kern_x] += np.tensordot(grouped_passed_grad[:, group, :, r, c], grouped_kernels[group], ((1,), (0,)))
     
-    return d_input.reshape(batch_size, groups*kern_count, fil_y, fil_x), d_kernels.reshape(groups*g_out_ch, kern_count, kern_y, kern_x)
+    return d_input.reshape(batch_size, groups*k_in_ch, in_y, in_x), d_kernels.reshape(groups*g_out_ch, k_in_ch, kern_y, kern_x)
 
 class ConvTranspose2d(Function):
-  def forward(func, x, kernels):
-    return x
+  def forward(func, x, kernels, stride=(1, 1), groups=1):
+    batch_size, in_ch, in_y, in_x = x.shape
+    out_ch, k_in_ch, kern_y, kern_x = kernels.shape
+    stride_y, stride_x = stride
+    out_y, out_x = (in_y - 1) * stride_y + kern_y, (in_x - 1) * stride_x + kern_x
+
+    assert k_in_ch * groups == in_ch
+    assert out_ch % groups == 0 and in_ch % groups == 0
+    g_out_ch = out_ch // groups
+
+    output = np.zeros((batch_size, groups, g_out_ch, out_y, out_x))
+    grouped_x = x.reshape(batch_size, groups, k_in_ch, in_y, in_x)
+    grouped_kernels = kernels.reshape(groups, g_out_ch, k_in_ch, kern_y, kern_x)
+
+    func.save_tensors(grouped_x, grouped_kernels, x.shape, stride)
+
+    for r in range(in_y):
+      for c in range(in_x):
+        for group in range(groups):
+          r0, c0 = r * stride_y, c * stride_x
+          output[:, group, :, r0:r0+kern_y, c0:c0+kern_x] += np.tensordot(grouped_x[:, group, :, r, c], grouped_kernels[group], ((1,), (1,)))
+
+    return output.reshape(batch_size, groups*g_out_ch, out_y, out_x)
   def backward(func, passed_grad):
-    return passed_grad
+    batch_size, out_ch, out_y, out_x = passed_grad.shape
+    grouped_x, grouped_kernels, x_shape, stride = func.saved_tensors
+    groups, g_out_ch, k_in_ch, kern_y, kern_x = grouped_kernels.shape
+    _, in_ch, in_y, in_x = x_shape
+    stride_y, stride_x = stride
+
+    d_kernels = np.zeros((groups, k_in_ch, g_out_ch, kern_y, kern_x))
+    d_input = np.zeros((batch_size, groups, in_y, in_x, k_in_ch))
+    grouped_passed_grad = passed_grad.reshape(batch_size, groups, g_out_ch, out_y, out_x)
+    strided_passed_grad = np.lib.stride_tricks.as_strided(grouped_passed_grad,
+                                                shape=(batch_size, groups, g_out_ch, in_y, in_x, kern_y, kern_x),
+                                                strides=(*grouped_passed_grad.strides[0:3], grouped_passed_grad.strides[3]*stride_y, grouped_passed_grad.strides[4]*stride_x, *grouped_passed_grad.strides[3:5]),
+                                                writeable=False)
+
+    for group in range(groups):
+      d_input[:, group] += np.tensordot(strided_passed_grad[:, group], grouped_kernels[group], ((1, 4, 5), (0, 2, 3)))
+      d_kernels[group] += np.tensordot(grouped_x[:, group], strided_passed_grad[:, group], ((0, 2, 3), (0, 2, 3)))
+
+    return np.moveaxis(d_input, 4, 2).reshape(batch_size, in_ch, in_y, in_x), np.moveaxis(d_kernels, 1, 0).reshape(groups*g_out_ch, k_in_ch, kern_y, kern_x)

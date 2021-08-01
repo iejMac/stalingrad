@@ -2,14 +2,25 @@ import nn
 import numpy as np
 from stalingrad.tensor import Tensor
 
-test = Tensor(np.ones((3, 3, 3)))
-t2= test.pad((2, 1))
+imgs = Tensor(np.ones((5, 1, 10, 10)))
 
-t3 = test*2
+k = np.ones((4, 1, 3, 3))
+k[:, :, 1] *= -1
+k[:, :, 0, 2] *= -1
 
-t3.backward()
+print(k)
+
+kern = Tensor(k)
+
+out = imgs.convtranspose2d(kern, stride=(2, 2))
+r = out.relu()
+
+r.backward()
+
+print(kern.grad)
+print(imgs.grad)
 
 
-print(test.grad)
 
+out.backward()
 
