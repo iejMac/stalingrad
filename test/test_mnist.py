@@ -4,8 +4,7 @@ import numpy as np
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
-
-from utils.training import train_module
+from stalingrad.utils import train_module
 
 np.random.seed(80085)
 
@@ -61,7 +60,7 @@ class ConvolutionalMnistClassifier(nn.Module):
 class TestMNIST(unittest.TestCase):
   def test_linear_mnist(self):
     mod = LinearMnistClassifier()
-    opt = optim.SGD(mnist_classifier.parameters(), learning_rate=1e-2)
+    opt = optim.SGD(mod.parameters(), learning_rate=1e-2)
     loss_func = nn.NLL(reduction="mean")
 
     correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=500, batch_size=200)
@@ -70,7 +69,7 @@ class TestMNIST(unittest.TestCase):
 
   def test_convolutional_mnist(self):
     mod = ConvolutionalMnistClassifier()
-    opt = optim.Adam(mnist_classifier.parameters(), learning_rate=1e-3)
+    opt = optim.Adam(mod.parameters(), learning_rate=1e-3)
     loss_func = nn.NLL(reduction="mean")
 
     correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=300, batch_size=200)
