@@ -4,7 +4,7 @@ from stalingrad.tensor import Tensor
 
 imgs = Tensor(np.ones((5, 2, 10, 10)))
 
-conv = nn.ConvTranspose2d(5, 4, 3, groups=2)
+conv = nn.ConvTranspose2d(2, 4, 3, groups=2)
 
 out = conv(imgs)
 out.backward()

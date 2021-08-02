@@ -44,7 +44,7 @@ class Conv2d(Module):
     '''
     self.groups = groups
     self.use_bias = use_bias
-    self.shape = (out_channels, in_channels, kernel_size, kernel_size)
+    self.shape = (out_channels, in_channels // groups, kernel_size, kernel_size)
     self.stride = (stride, stride) if isinstance(stride, int) else stride
 
     padding = (padding, padding) if isinstance(padding, int) else padding
