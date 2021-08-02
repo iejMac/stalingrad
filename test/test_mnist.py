@@ -5,6 +5,8 @@ from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
 
+from utils.training import train_module
+
 np.random.seed(80085)
 
 # mnist loader from : https://github.com/geohot/tinygrad/blob/master/test/test_mnist.py
@@ -58,71 +60,20 @@ class ConvolutionalMnistClassifier(nn.Module):
 
 class TestMNIST(unittest.TestCase):
   def test_linear_mnist(self):
-    steps = 500
-    batch_size = 200
-    lr = 1e-2
-
-    mnist_classifier = LinearMnistClassifier()
-    opt = optim.SGD(mnist_classifier.parameters(), learning_rate=lr)
+    mod = LinearMnistClassifier()
+    opt = optim.SGD(mnist_classifier.parameters(), learning_rate=1e-2)
     loss_func = nn.NLL(reduction="mean")
 
-    # train:
-    for step in range(steps):
-      ind = np.random.randint(0, len(X_train), size=(batch_size))
-      X_batch = Tensor(X_train[ind], requires_grad=False)
-      Y_batch = Tensor(Y_train[ind], requires_grad=False)
-
-      probs = mnist_classifier(X_batch)
-      loss = loss_func(probs, Y_batch)
-
-      loss.backward()
-      opt.step()
-      opt.zero_grad()
-
-    #evaluate:
-    preds = mnist_classifier(Tensor(X_test, requires_grad=False))
-    correct = 0
-
-    for i in range(len(Y_test)):
-      lab, pred = np.argmax(Y_test[i]), np.argmax(preds[i].data)
-      correct += (lab == pred)
-    
-    correct_pct = correct/len(Y_test)
+    correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=500, batch_size=200)
     print(f"Linear MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
 
   def test_convolutional_mnist(self):
-    steps = 300
-    batch_size = 200
-    lr = 0.001
-
-    mnist_classifier = ConvolutionalMnistClassifier()
-    opt = optim.Adam(mnist_classifier.parameters(), learning_rate=lr)
+    mod = ConvolutionalMnistClassifier()
+    opt = optim.Adam(mnist_classifier.parameters(), learning_rate=1e-3)
     loss_func = nn.NLL(reduction="mean")
 
-    # train:
-    for step in range(steps):
-      ind = np.random.randint(0, len(X_train), size=(batch_size))
-      X_batch = Tensor(X_train[ind], requires_grad=False)
-      Y_batch = Tensor(Y_train[ind], requires_grad=False)
-
-      probs = mnist_classifier(X_batch)
-      loss = loss_func(probs, Y_batch)
-      print(loss)
-
-      loss.backward()
-      opt.step()
-      opt.zero_grad()
-
-    #evaluate:
-    preds = mnist_classifier(Tensor(X_test, requires_grad=False))
-    correct = 0
-
-    for i in range(len(Y_test)):
-      lab, pred = np.argmax(Y_test[i]), np.argmax(preds[i].data)
-      correct += (lab == pred)
-    
-    correct_pct = correct/len(Y_test)
+    correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=300, batch_size=200)
     print(f"Convolutional MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
 
