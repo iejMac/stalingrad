@@ -36,13 +36,15 @@ class MnistVAE(nn.Module):
     self.decoder = Decoder(latent_dim)
   def forward(self, x):
     x = x.reshape(shape=(-1, 1, 28, 28))
-    x = self.encoder(x)
+    lat = self.encoder(x)
 
-    # Samp:
-    x = Tensor(x.data[:, :self.latent_dim])
+    # reparameterization:
+    epsilon = Tensor(np.random.normal(0.0, 1.0, size=(x.shape[0], latent_dim)), requires_grad=False)
+    mu, var = lat[:, :self.latent_dim], lat[:, self.latent_dim:]
+    samp = mu + epsilon * (var**(0.5))
 
-    x = self.decoder(x)
-    return x
+    out = self.decoder(samp)
+    return out, samp
 
   
 test = Tensor(np.ones((10, 28, 28)), requires_grad=False)
