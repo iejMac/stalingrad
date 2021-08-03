@@ -14,7 +14,7 @@ def train_module(module, optimizer, loss_func, X_train, Y_train, steps=500, batc
     optimizer.step()
     optimizer.zero_grad()
 
-def test_accuracy(module, X_test, Y_test)
+def test_accuracy(module, X_test, Y_test):
   preds = module(Tensor(X_test, requires_grad=False))
   correct = 0
   for i in range(len(Y_test)):
