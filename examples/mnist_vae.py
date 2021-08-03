@@ -39,7 +39,7 @@ class MnistVAE(nn.Module):
     lat = self.encoder(x)
 
     # reparameterization:
-    epsilon = Tensor(np.random.normal(0.0, 1.0, size=(x.shape[0], latent_dim)), requires_grad=False)
+    epsilon = Tensor(np.random.normal(0.0, 1.0, size=(x.shape[0], self.latent_dim)), requires_grad=False)
     mu, var = lat[:, :self.latent_dim], lat[:, self.latent_dim:]
     samp = mu + epsilon * (var**(0.5))
 
@@ -49,5 +49,14 @@ class MnistVAE(nn.Module):
   
 test = Tensor(np.ones((10, 28, 28)), requires_grad=False)
 vae = MnistVAE(20)
-out = vae(test)
-print(out.shape)
+
+out, samp = vae(test)
+loss = samp.sigmoid()
+loss.backward()
+out, samp = vae(test)
+loss = samp.sigmoid()
+loss.backward()
+out, samp = vae(test)
+loss = samp.sigmoid()
+loss.backward()
+

@@ -4,6 +4,8 @@ from stalingrad.tensor import Tensor
 # -= Modules =-
 
 class Module:
+  def __init__(self):
+    self.training = True
   def __call__(self, x):
     return self.forward(x)
   def parameters(self, parent="root"):
@@ -14,9 +16,14 @@ class Module:
       elif isinstance(self.__dict__[attr], Module):
         params.update(self.__dict__[attr].parameters(parent + "." + attr))
     return params
+  def training(self):
+    self.training = True
+  def eval(self):
+    self.training = False
   
 class Linear(Module):
   def __init__(self, in_neurons, out_neurons, use_bias=True):
+    super().__init__()
     self.use_bias = use_bias
     self.shape = (in_neurons, out_neurons)
 
@@ -33,6 +40,7 @@ class Linear(Module):
 
 class Conv2d(Module):
   def __init__(self, in_channels, out_channels, kernel_size, stride=(1, 1), padding="valid", groups=1, use_bias=True):
+    super().__init__()
     '''
       stride: kernel step size in y and x direction respectively
       padding (zero padding):
@@ -85,6 +93,7 @@ class ConvTranspose2d(Conv2d):
 
 class Loss(Module):
   def __init__(self, reduction=None, reduce_axis=0):
+    super().__init__()
     self.reduction=reduction
     self.reduce_axis = reduce_axis
   def __call__(self, prediction, target):
