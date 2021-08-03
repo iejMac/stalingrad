@@ -90,6 +90,16 @@ class Reshape(Function):
     x, _ = func.saved_tensors
     return passed_grad.reshape(x.shape)
 
+class Slice(Function):
+  def forward(func, x, inds=None):
+    func.save_tensors(x.shape, inds)
+    return x[inds]
+  def backward(func, passed_grad):
+    x_shape, inds = func.saved_tensors
+    grad = np.zeros(x_shape)
+    grad[inds] += passed_grad
+    return grad
+
 class Pad(Function):
   def forward(func, x, padding=None):
     padding = (padding, padding) if isinstance(padding, int) else padding

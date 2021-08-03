@@ -21,8 +21,9 @@ class Tensor:
     return np.array_repr(self.data).replace("array", "Tensor")
   def assign(self, x):
     self.data = x.data
-  def __getitem__(self, i):
-    return Tensor(self.data.__getitem__(i), requires_grad=self.requires_grad)
+
+  def __getitem__(self, slices):
+    return self.slice(inds=tuple([slices]) if isinstance(slices, (int, slice)) else slices)
 
   def backward(self, passed_grad=None):
     if self.func is None:
@@ -34,7 +35,7 @@ class Tensor:
 
     grads = self.func.backward(self.func, passed_grad)
     grads = grads if len(self.func.parents) > 1 else [grads]
-    
+
     for p, g in zip(self.func.parents, grads):
       if p.requires_grad:
         p.grad += g

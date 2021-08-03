@@ -2,12 +2,21 @@ import nn
 import numpy as np
 from stalingrad.tensor import Tensor
 
-imgs = Tensor(np.ones((5, 2, 10, 10)))
+t2 = np.ones((3, 2, 5, 5))
+t2[:, :, 1] *= 2
+t2[:, :, 2] *= 3
+t2[:, :, 3] *= 4
+t2[:, :, 4] *= 5
 
-conv = nn.ConvTranspose2d(2, 4, 3, groups=2)
+t2[:, 1] *= 2
 
-out = conv(imgs)
-out.backward()
+t2[1] *= 2
+t2[2] *= 3
 
-print(out.shape)
 
+t1 = Tensor(t2)
+
+test = t1[0, :, 3:, 3:]
+test.backward()
+
+print(t1.grad)
