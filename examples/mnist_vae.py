@@ -3,6 +3,7 @@ import numpy as np
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
+from stalingrad.utils import train_module, fetch_mnist
 
 class Encoder(nn.Module):
   def __init__(self, latent_dim):
@@ -56,23 +57,16 @@ def VAELoss(preds, targets):
   reconstruction_loss = nn.NLL(reduction="mean")(x, targets)
   return reconstruction_loss + kl_loss
   
-# X_train, Y_train, X_test, Y_test = get_mnist()
+X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
+X_train, X_test = np.expand_dims(X_train, 1) / 255.0, np.expand_dims(X_test, 1) / 255.0
 
-def train():
+if __name__ == "__main__":
   steps = 100
-  bach_size = 200
+  batch_size = 200
   latent_dim = 20
   lr = 1e-3
 
-  vae = MnistVAE(latent_dim)
-  optimizer = optim.Adam(vae.parameters(), learning_rate=lr)
-
-  test = Tensor(np.ones((10, 1, 28, 28)), requires_grad=False)
-  out, mu, logvar = vae(test)
-
-  loss = VAELoss((out, mu, logvar), out)
-  print(out.shape)
-
-
-if __name__ == "__main__":
-  train()
+  mod = MnistVAE(latent_dim)
+  optimizer = optim.Adam(mod.parameters(), learning_rate=lr)
+  loss_func = VAELoss
+  train_module(mod, optimizer, loss_func, X_train, X_train, steps, batch_size)

@@ -9,6 +9,7 @@ def train_module(module, optimizer, loss_func, X_train, Y_train, steps=500, batc
 
     probs = module(X_batch)
     loss = loss_func(probs, Y_batch)
+    print(loss)
 
     loss.backward()
     optimizer.step()
