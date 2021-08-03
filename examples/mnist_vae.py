@@ -50,9 +50,12 @@ class MnistVAE(nn.Module):
     out = self.decoder(samp)
     return out, mu, logvar
 
-def unitGaussianKLLoss(mu, logvar):
-  return ((logvar.exp() - logvar - 1 + mu**2) * 0.5).sum(axis=1).mean(axis=0)
-
+def VAELoss(preds, targets):
+  x, mu, logvar = preds
+  kl_loss = ((logvar.exp() - logvar - 1 + mu**2) * 0.5).sum(axis=1).mean(axis=0)
+  reconstruction_loss = nn.NLL(reduction="mean")(x, targets)
+  return reconstruction_loss + kl_loss
+  
 # X_train, Y_train, X_test, Y_test = get_mnist()
 
 def train():
@@ -67,9 +70,9 @@ def train():
   test = Tensor(np.ones((10, 1, 28, 28)), requires_grad=False)
   out, mu, logvar = vae(test)
 
-  kl_loss = unitGaussianKLLoss(mu, logvar)
+  loss = VAELoss((out, mu, logvar), out)
+  print(out.shape)
 
-  for step in range(steps):
 
 if __name__ == "__main__":
   train()
