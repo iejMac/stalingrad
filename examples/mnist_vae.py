@@ -1,6 +1,7 @@
 import numpy as np
 
 from stalingrad import nn
+from stalingrad import optim
 from stalingrad.tensor import Tensor
 
 class Encoder(nn.Module):
@@ -37,26 +38,38 @@ class MnistVAE(nn.Module):
   def forward(self, x):
     x = x.reshape(shape=(-1, 1, 28, 28))
     lat = self.encoder(x)
+    mu, logvar = lat[:, :self.latent_dim], lat[:, self.latent_dim:]
 
     # reparameterization:
-    epsilon = Tensor(np.random.normal(0.0, 1.0, size=(x.shape[0], self.latent_dim)), requires_grad=False)
-    mu, var = lat[:, :self.latent_dim], lat[:, self.latent_dim:]
-    samp = mu + epsilon * (var**(0.5))
+    if self.training:
+      epsilon = Tensor(np.random.normal(0.0, 1.0, size=(x.shape[0], self.latent_dim)), requires_grad=False)
+      samp = mu + epsilon * ((logvar * 0.5).exp())
+    else:
+      samp = mu
 
     out = self.decoder(samp)
-    return out, samp
+    return out, mu, logvar
 
-  
-test = Tensor(np.ones((10, 28, 28)), requires_grad=False)
-vae = MnistVAE(20)
+def unitGaussianKLLoss(mu, logvar):
+  return ((logvar.exp() - logvar - 1 + mu**2) * 0.5).sum(axis=1).mean(axis=0)
 
-out, samp = vae(test)
-loss = samp.sigmoid()
-loss.backward()
-out, samp = vae(test)
-loss = samp.sigmoid()
-loss.backward()
-out, samp = vae(test)
-loss = samp.sigmoid()
-loss.backward()
+# X_train, Y_train, X_test, Y_test = get_mnist()
 
+def train():
+  steps = 100
+  bach_size = 200
+  latent_dim = 20
+  lr = 1e-3
+
+  vae = MnistVAE(latent_dim)
+  optimizer = optim.Adam(vae.parameters(), learning_rate=lr)
+
+  test = Tensor(np.ones((10, 1, 28, 28)), requires_grad=False)
+  out, mu, logvar = vae(test)
+
+  kl_loss = unitGaussianKLLoss(mu, logvar)
+
+  for step in range(steps):
+
+if __name__ == "__main__":
+  train()

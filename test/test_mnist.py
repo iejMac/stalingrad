@@ -4,7 +4,7 @@ import numpy as np
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
-from stalingrad.utils import train_module
+from stalingrad.utils import train_module, test_accuracy
 
 np.random.seed(80085)
 
@@ -63,7 +63,8 @@ class TestMNIST(unittest.TestCase):
     opt = optim.SGD(mod.parameters(), learning_rate=1e-2)
     loss_func = nn.NLL(reduction="mean")
 
-    correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=500, batch_size=200)
+    train_module(mod, opt, loss_func, X_train, Y_train, steps=500, batch_size=200)
+    correct_pct = test_accuracy(mod, X_test, Y_test)
     print(f"Linear MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
 
@@ -72,7 +73,8 @@ class TestMNIST(unittest.TestCase):
     opt = optim.Adam(mod.parameters(), learning_rate=1e-3)
     loss_func = nn.NLL(reduction="mean")
 
-    correct_pct = train_module(mod, opt, loss_func, X_train, Y_train, X_test, Y_test, steps=300, batch_size=200)
+    train_module(mod, opt, loss_func, X_train, Y_train, steps=500, batch_size=200)
+    correct_pct = test_accuracy(mod, X_test, Y_test)
     print(f"Convolutional MNIST Classifier test accuracy: {correct_pct}")
     self.assertTrue(correct_pct > 0.95)
 
