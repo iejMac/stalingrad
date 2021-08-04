@@ -73,7 +73,6 @@ if __name__ == "__main__":
     batch_size = 200
 
     mod = MnistVAE(latent_dim)
-    # mod = load_module("examples/mnist_vae.pkl")
     optimizer = optim.Adam(mod.parameters(), learning_rate=lr)
     loss_func = VAELoss
     train_module(mod, optimizer, loss_func, X_train, X_train, steps, batch_size)
@@ -83,10 +82,5 @@ if __name__ == "__main__":
     mod.eval()
     gaus = Tensor(np.random.normal(0.0, 1.0, size=(1, mod.latent_dim)))
     img = (mod.decoder(gaus)[0, 0].data * 255).astype(int)
-
-    # test = Tensor(X_test[0:10], requires_grad=False)
-    # imgs, mu, logvar  = mod(test)
-    # img = (imgs[0][0].data * 255).astype(int)
-
     plt.imshow(img, cmap="gray")
     plt.show()
