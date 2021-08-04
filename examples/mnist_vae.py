@@ -8,9 +8,9 @@ from stalingrad.utils import train_module, fetch_mnist, save_module, load_module
 
 class Encoder(nn.Module):
   def __init__(self, latent_dim):
-    self.conv1 = nn.Conv2d(1, 64, 4, stride=2)
-    self.conv2 = nn.Conv2d(64, 32, 3, stride=1)
-    self.conv3 = nn.Conv2d(32, 4, 3, stride=1)
+    self.conv1 = nn.Conv2d(1, 96, 4, stride=2)
+    self.conv2 = nn.Conv2d(96, 96, 3, stride=1)
+    self.conv3 = nn.Conv2d(96, 4, 3, stride=1)
     self.lin = nn.Linear(324, 2 * latent_dim)
   def forward(self, x):
     x = self.conv1(x).relu()
@@ -20,36 +20,18 @@ class Encoder(nn.Module):
     x = self.lin(x)
     return x
 
-class EncoderLin(nn.Module):
-  def __init__(self, latent_dim):
-    self.lin1 = nn.Linear(784, latent_dim**2)
-    self.lin2 = nn.Linear(latent_dim**2, latent_dim*2)
-  def forward(self, x):
-    x = self.lin1(x).relu()
-    x = self.lin2(x)
-    return x
-
 class Decoder(nn.Module):
   def __init__(self, latent_dim):
     self.lin = nn.Linear(latent_dim, 324)
-    self.conv1T = nn.ConvTranspose2d(4, 32, 3, stride=1)
-    self.conv2T = nn.ConvTranspose2d(32, 64, 3, stride=1)
-    self.conv3T = nn.ConvTranspose2d(64, 1, 4, stride=2)
+    self.conv1T = nn.ConvTranspose2d(4, 96, 3, stride=1)
+    self.conv2T = nn.ConvTranspose2d(96, 128, 3, stride=1)
+    self.conv3T = nn.ConvTranspose2d(128, 1, 4, stride=2)
   def forward(self, x):
     x = self.lin(x)
     x = x.reshape(shape=(-1, 4, 9, 9))
     x = self.conv1T(x).relu()
     x = self.conv2T(x).relu()
     x = self.conv3T(x).sigmoid()
-    return x
-
-class DecoderLin(nn.Module):
-  def __init__(self, latent_dim):
-    self.lin1 = nn.Linear(latent_dim, latent_dim**2)
-    self.lin2 = nn.Linear(latent_dim**2, 784)
-  def forward(self, x):
-    x = self.lin1(x).relu()
-    x = self.lin2(x).sigmoid()
     return x
 
 class MnistVAE(nn.Module):
