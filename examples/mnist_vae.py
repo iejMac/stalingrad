@@ -57,7 +57,7 @@ class MnistVAE(nn.Module):
 def VAELoss(preds, targets):
   x, mu, logvar = preds
   kl_loss = ((logvar.exp() - logvar - 1 + mu**2) * 0.5).sum(axis=(0, 1))
-  reconstruction_loss = nn.NLL(reduction="sum")(x, targets) + nn.NLL(reduction="sum")(1.0 - x, 1.0 - targets)
+  reconstruction_loss = nn.BCELoss(reduction="sum")(x, targets)
   print(kl_loss, reconstruction_loss)
   return reconstruction_loss + kl_loss
   

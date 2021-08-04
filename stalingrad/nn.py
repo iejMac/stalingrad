@@ -115,3 +115,11 @@ class NLL(Loss):
     sum_axis = list(range(len(prediction.shape)))
     sum_axis.remove(self.reduce_axis)
     return (target * prediction.log() * (-1.0)).sum(axis=tuple(sum_axis))
+
+class BCELoss(Loss):
+  def __init__(self, reduction=None, reduce_axis=0):
+    super().__init__(reduction, reduce_axis)
+  def forward(self, prediction, target):
+    sum_axis = list(range(len(prediction.shape)))
+    sum_axis.remove(self.reduce_axis)
+    return ((target * prediction.log() + (1.0 - target) * ((1.0 - prediction).log())) * (-1.0)).sum(axis=tuple(sum_axis))
