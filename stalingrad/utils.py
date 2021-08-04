@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 from stalingrad.tensor import Tensor
 
@@ -9,7 +10,6 @@ def train_module(module, optimizer, loss_func, X_train, Y_train, steps=500, batc
 
     probs = module(X_batch)
     loss = loss_func(probs, Y_batch)
-    print(loss)
 
     loss.backward()
     optimizer.step()
@@ -40,3 +40,12 @@ def fetch_mnist(flatten=False, one_hot=False):
     Y_train, Y_test = Y_train_onehot, Y_test_onehot
 
   return X_train, Y_train, X_test, Y_test
+
+def save_module(module, path):
+  with open(path, "wb") as mod:
+    pickle.dump(module, mod)
+
+def load_module(path):
+  with open(path, "rb") as mod:
+    module = pickle.load(mod)
+  return module

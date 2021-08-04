@@ -86,6 +86,7 @@ def register_operations(name, func):
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
     setattr(Tensor, f"__{name}__", compute)
+    setattr(Tensor, f"__r{name}__", lambda self, x: compute(x, self))
 
 def _register_operations(namespace):
   for name, cls in inspect.getmembers(namespace, inspect.isclass):
