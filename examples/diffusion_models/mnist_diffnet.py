@@ -9,7 +9,7 @@ from stalingrad.utils import fetch_mnist
 def play_sequence(sequence, frame_time=100):
   cv2.namedWindow("preview")
   for img in sequence:
-    show_img = cv2.resize(img, (280, 280))
+    show_img = cv2.resize(img, (280, 280), interpolation=cv2.INTER_NEAREST)
     cv2.imshow("img", show_img)
     if cv2.waitKey(frame_time) & 0xFF == ord('q'):
       break
@@ -21,6 +21,12 @@ def cos_alpha_schedule(t, T):
   f0 = cos((s/(1+s)) * (np.pi / 2))**2
   return ft/f0
 
+def forward_noising(X0s, t, T):
+  alpha_t = cos_alpha_schedule(t, T)
+  eps = np.random.normal(0.0, 1.0, size=X0s.shape)
+  Xts = (alpha_t**0.5)*X0s + ((1-alpha_t)**0.5)*eps
+  return Xts, eps
+
 class DiffNet(nn.Module):
   def __init__(self):
     super().__init__()
@@ -31,7 +37,27 @@ class DiffNet(nn.Module):
 X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
 X_train, X_test = np.expand_dims(X_train, 1) / 255.0, np.expand_dims(X_test, 1) / 255.0
 
-num = X_train[0]
+x0 = X_train[0]
+
+print(x0.min())
+T = 100
+t = 0
+
+seq = []
+
+for t in range(T):
+  xt, eps = forward_noising(x0, t, T)
+  # show_xt = (xt[0]*255.0).astype(np.uint8)
+  print(xt.min(), xt.max(), xt.mean())
+  show_xt = xt[0]*255.0
+  seq.append(show_xt)
+
+# play_sequence(seq, 1000)
+
+# for i in range(20):
+#   plt.imshow(seq[i], cmap="gray")
+#   plt.show()
+
 
 
 
