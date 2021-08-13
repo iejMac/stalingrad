@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from math import cos
 from matplotlib import pyplot as plt
 
 from stalingrad import nn
@@ -14,6 +15,12 @@ def play_sequence(sequence, frame_time=100):
       break
   cv2.destroyWindow("preview")
 
+def cos_alpha_schedule(t, T):
+  s = 0.008
+  ft = cos(((t/T + s)/(1+s)) * (np.pi / 2))**2
+  f0 = cos((s/(1+s)) * (np.pi / 2))**2
+  return ft/f0
+
 class DiffNet(nn.Module):
   def __init__(self):
     super().__init__()
@@ -24,8 +31,7 @@ class DiffNet(nn.Module):
 X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
 X_train, X_test = np.expand_dims(X_train, 1) / 255.0, np.expand_dims(X_test, 1) / 255.0
 
-X_train, X_test = (X_train*255.0).astype(np.uint8), (X_test*255.0).astype(np.uint8)
-seq = X_train[:20, 0]
+num = X_train[0]
 
-play_sequence(seq, 1000)
+
 
