@@ -35,11 +35,11 @@ class DiffNet(nn.Module):
     self.conv3 = nn.Conv2d(16, 1, stride=1, padding="same")
 
 X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
-X_train, X_test = np.expand_dims(X_train, 1) / 255.0, np.expand_dims(X_test, 1) / 255.0
+X_train, X_test = (np.expand_dims(X_train, 1)*2)/255.0 - 1.0, (np.expand_dims(X_test, 1)*2)/255.0 - 1.0
+X_train, X_test = X_train[:, 0], X_test[:, 0]
 
 x0 = X_train[0]
 
-print(x0.min())
 T = 100
 t = 0
 
@@ -47,17 +47,8 @@ seq = []
 
 for t in range(T):
   xt, eps = forward_noising(x0, t, T)
-  # show_xt = (xt[0]*255.0).astype(np.uint8)
-  print(xt.min(), xt.max(), xt.mean())
-  show_xt = xt[0]*255.0
+  show_xt = xt - xt.min()
+  show_xt = ((show_xt / show_xt.max()) * 255.0).astype(np.uint8)
   seq.append(show_xt)
 
-# play_sequence(seq, 1000)
-
-# for i in range(20):
-#   plt.imshow(seq[i], cmap="gray")
-#   plt.show()
-
-
-
-
+play_sequence(seq, 100)
