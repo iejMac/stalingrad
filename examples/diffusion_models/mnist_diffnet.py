@@ -4,6 +4,7 @@ from math import cos
 from matplotlib import pyplot as plt
 
 from stalingrad import nn
+from stalingrad.tensor import Tensor
 from stalingrad.utils import fetch_mnist
 
 def play_sequence(sequence, frame_time=100):
@@ -42,11 +43,16 @@ def get_dataset(X0, T):
   return X_seq, Y_seq
   
 class DiffNet(nn.Module):
-  def __init__(self):
+  def __init__(self, kernel_size=3):
     super().__init__()
-    self.conv1 = nn.Conv2d(1, 16, stride=1, padding="same")
-    self.conv2 = nn.Conv2d(16, 16, stride=1, padding="same")
-    self.conv3 = nn.Conv2d(16, 1, stride=1, padding="same")
+    self.conv1 = nn.Conv2d(1, 16, kernel_size, stride=1, padding="valid")
+    self.conv2 = nn.Conv2d(16, 16, kernel_size, stride=1, padding="valid")
+    self.conv3 = nn.Conv2d(16, 1, kernel_size, stride=1, padding="valid")
+  def forward(self, x):
+    x = self.conv1(x)
+    x = self.conv2(x)
+    x = self.conv3(x)
+    return x
 
 X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
 X_train, X_test = (np.expand_dims(X_train, 1)*2)/255.0 - 1.0, (np.expand_dims(X_test, 1)*2)/255.0 - 1.0 # normalize
@@ -55,19 +61,17 @@ T = 100
 X0 = X_train[:20]
 
 X, Y = get_dataset(X0, T)
+x = Tensor(X[0])
 
-test_noised = X[:500, 0]
+DN = DiffNet()
 
+out = DN(x)
+
+
+'''
 seq = []
 for img in test_noised:
   show_img = img - img.min()
   show_img = ((show_img / show_img.max()) * 255.0).astype(np.uint8)
   seq.append(show_img)
-
-play_sequence(seq, 50)
-
-
-
-
-
-
+'''
