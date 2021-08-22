@@ -27,6 +27,20 @@ def forward_noising(X0s, t, T):
   Xts = (alpha_t**0.5)*X0s + ((1-alpha_t)**0.5)*eps
   return Xts, eps
 
+def get_dataset(X0, T):
+  X_seq, Y_seq = [], []
+  for t in range(T):
+    Xt, eps = forward_noising(X0, t, T)
+    X_seq.append(Xt)
+    Y_seq.append(eps)
+
+  X_seq, Y_seq = np.swapaxes(np.array(X_seq), 0, 1).reshape(-1, 1, 28, 28), np.swapaxes(np.array(Y_seq), 0, 1).reshape(-1, 1, 28, 28)
+
+  p = np.random.permutation(len(X_seq))
+  X_seq = X_seq[p]
+  Y_seq = Y_seq[p]
+  return X_seq, Y_seq
+  
 class DiffNet(nn.Module):
   def __init__(self):
     super().__init__()
@@ -35,20 +49,25 @@ class DiffNet(nn.Module):
     self.conv3 = nn.Conv2d(16, 1, stride=1, padding="same")
 
 X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
-X_train, X_test = (np.expand_dims(X_train, 1)*2)/255.0 - 1.0, (np.expand_dims(X_test, 1)*2)/255.0 - 1.0
-X_train, X_test = X_train[:, 0], X_test[:, 0]
-
-x0 = X_train[0]
+X_train, X_test = (np.expand_dims(X_train, 1)*2)/255.0 - 1.0, (np.expand_dims(X_test, 1)*2)/255.0 - 1.0 # normalize
 
 T = 100
-t = 0
+X0 = X_train[:20]
+
+X, Y = get_dataset(X0, T)
+
+test_noised = X[:500, 0]
 
 seq = []
+for img in test_noised:
+  show_img = img - img.min()
+  show_img = ((show_img / show_img.max()) * 255.0).astype(np.uint8)
+  seq.append(show_img)
 
-for t in range(T):
-  xt, eps = forward_noising(x0, t, T)
-  show_xt = xt - xt.min()
-  show_xt = ((show_xt / show_xt.max()) * 255.0).astype(np.uint8)
-  seq.append(show_xt)
+play_sequence(seq, 50)
 
-play_sequence(seq, 100)
+
+
+
+
+
