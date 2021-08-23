@@ -4,8 +4,9 @@ from math import cos
 from matplotlib import pyplot as plt
 
 from stalingrad import nn
+from stalingrad import optim
 from stalingrad.tensor import Tensor
-from stalingrad.utils import fetch_mnist
+from stalingrad.utils import fetch_mnist, train_module, save_module
 
 def play_sequence(sequence, frame_time=100):
   cv2.namedWindow("preview")
@@ -43,11 +44,11 @@ def get_dataset(X0, T):
   return X_seq, Y_seq
   
 class DiffNet(nn.Module):
-  def __init__(self, kernel_size=3):
+  def __init__(self, kern_size=3):
     super().__init__()
-    self.conv1 = nn.Conv2d(1, 16, kernel_size, stride=1, padding="valid")
-    self.conv2 = nn.Conv2d(16, 16, kernel_size, stride=1, padding="valid")
-    self.conv3 = nn.Conv2d(16, 1, kernel_size, stride=1, padding="valid")
+    self.conv1 = nn.Conv2d(1, 16, kernel_size=kern_size, stride=1, padding="same")
+    self.conv2 = nn.Conv2d(16, 16, kernel_size=kern_size, stride=1, padding="same")
+    self.conv3 = nn.Conv2d(16, 1, kernel_size=kern_size, stride=1, padding="same")
   def forward(self, x):
     x = self.conv1(x)
     x = self.conv2(x)
@@ -58,20 +59,36 @@ X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
 X_train, X_test = (np.expand_dims(X_train, 1)*2)/255.0 - 1.0, (np.expand_dims(X_test, 1)*2)/255.0 - 1.0 # normalize
 
 T = 100
+lr = 3e-4
 X0 = X_train[:20]
 
 X, Y = get_dataset(X0, T)
-x = Tensor(X[0])
+DN = DiffNet(kern_size=3)
+loss = nn.MSE()
+opt = optim.Adam(DN.parameters(), lr)
 
-DN = DiffNet()
+train_module(DN, opt, loss, X, Y, steps=10, batch_size=200)
+xt = np.random.normal(0.0, 1.0, size=X[0:1].shape)
+show_xt = xt - xt.min()
+show_xt = ((show_xt / show_xt.max()) * 255.0).astype(np.uint8)
+denoised_seq = [show_xt[0][0]]
 
-out = DN(x)
+xt = Tensor(xt)
+
+for t in range(T):
+  t_back = T-t
+  eps = DN(xt)
+  alpha_t = cos_alpha_schedule(t_back, T)
+  alpha_t_prev = cos_alpha_schedule(t_back - 1, T)
+  beta_t = 1 - alpha_t/alpha_t_prev
+  beta_t = beta_t if beta_t <= 0.999 else 0.999 # hacky
+  mean_xt_prev = (1/(alpha_t**0.5)) * (xt.data - (beta_t/((1-alpha_t)**0.5)) * eps.data)
+
+  show_xt_prev = mean_xt_prev - mean_xt_prev.min()
+  show_xt_prev = ((show_xt_prev / show_xt_prev.max()) * 255.0).astype(np.uint8)
+  denoised_seq.append(show_xt_prev[0][0])
+
+  xt = Tensor(mean_xt_prev)
 
 
-'''
-seq = []
-for img in test_noised:
-  show_img = img - img.min()
-  show_img = ((show_img / show_img.max()) * 255.0).astype(np.uint8)
-  seq.append(show_img)
-'''
+play_sequence(denoised_seq, 100)
