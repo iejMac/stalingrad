@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
-from stalingrad.utils import fetch_mnist, train_module, save_module
+from stalingrad.utils import fetch_mnist, train_module, save_module, load_module
 
 def play_sequence(sequence, frame_time=100):
   cv2.namedWindow("preview")
@@ -22,6 +22,9 @@ def cos_alpha_schedule(t, T):
   ft = cos(((t/T + s)/(1+s)) * (np.pi / 2))**2
   f0 = cos((s/(1+s)) * (np.pi / 2))**2
   return ft/f0
+
+def regular_alpha_schedule(alpha, t, T):
+  pass
 
 def forward_noising(X0s, t, T):
   alpha_t = cos_alpha_schedule(t, T)
@@ -50,8 +53,8 @@ class DiffNet(nn.Module):
     self.conv2 = nn.Conv2d(16, 16, kernel_size=kern_size, stride=1, padding="same")
     self.conv3 = nn.Conv2d(16, 1, kernel_size=kern_size, stride=1, padding="same")
   def forward(self, x):
-    x = self.conv1(x)
-    x = self.conv2(x)
+    x = self.conv1(x).relu()
+    x = self.conv2(x).relu()
     x = self.conv3(x)
     return x
 
@@ -63,11 +66,14 @@ lr = 3e-4
 X0 = X_train[:20]
 
 X, Y = get_dataset(X0, T)
-DN = DiffNet(kern_size=3)
 loss = nn.MSE()
+DN = DiffNet(kern_size=3)
+# DN = load_module("./examples/diffusion_models/diffnet.pkl")
 opt = optim.Adam(DN.parameters(), lr)
 
-train_module(DN, opt, loss, X, Y, steps=10, batch_size=200)
+# train_module(DN, opt, loss, X, Y, steps=100, batch_size=200)
+# save_module(DN, "./examples/diffusion_models/diffnet.pkl")
+
 xt = np.random.normal(0.0, 1.0, size=X[0:1].shape)
 show_xt = xt - xt.min()
 show_xt = ((show_xt / show_xt.max()) * 255.0).astype(np.uint8)
@@ -78,17 +84,19 @@ xt = Tensor(xt)
 for t in range(T):
   t_back = T-t
   eps = DN(xt)
-  alpha_t = cos_alpha_schedule(t_back, T)
-  alpha_t_prev = cos_alpha_schedule(t_back - 1, T)
-  beta_t = 1 - alpha_t/alpha_t_prev
+  alpha_t_bar = cos_alpha_schedule(t_back, T)
+  alpha_t_bar_prev = cos_alpha_schedule(t_back - 1, T)
+  beta_t = 1 - alpha_t_bar/alpha_t_bar_prev
   beta_t = beta_t if beta_t <= 0.999 else 0.999 # hacky
-  mean_xt_prev = (1/(alpha_t**0.5)) * (xt.data - (beta_t/((1-alpha_t)**0.5)) * eps.data)
+  alpha_t = 1 - beta_t
+  
+  mean_xt_prev = (1/(alpha_t**0.5)) * (xt.data - (beta_t/((1-alpha_t_bar)**0.5)) * eps.data)
+  print(mean_xt_prev.sum())
 
   show_xt_prev = mean_xt_prev - mean_xt_prev.min()
-  show_xt_prev = ((show_xt_prev / show_xt_prev.max()) * 255.0).astype(np.uint8)
+  show_xt_prev = ((show_xt_prev / show_xt_prev.max()) * 255.0).astype(np.uint8) + 10
   denoised_seq.append(show_xt_prev[0][0])
 
   xt = Tensor(mean_xt_prev)
 
-
-play_sequence(denoised_seq, 100)
+# play_sequence(denoised_seq, 100)

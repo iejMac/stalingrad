@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -5,6 +6,15 @@ from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
 from stalingrad.utils import train_module, fetch_mnist, save_module, load_module
+
+def play_sequence(sequence, frame_time=100):
+  cv2.namedWindow("preview")
+  for img in sequence:
+    show_img = cv2.resize(img, (280, 280), interpolation=cv2.INTER_NEAREST)
+    cv2.imshow("img", show_img)
+    if cv2.waitKey(frame_time) & 0xFF == ord('q'):
+      break
+  cv2.destroyWindow("preview")
 
 class Encoder(nn.Module):
   def __init__(self, latent_dim):
@@ -88,10 +98,10 @@ def VAELoss(preds, targets):
   return reconstruction_loss + kl_loss
   
 # X_train, _, X_test, _ = fetch_mnist(flatten=False, one_hot=True)
-X_train, _, X_test, _ = fetch_mnist(flatten=True, one_hot=True)
+X_train, _, X_test, y_test = fetch_mnist(flatten=True, one_hot=False)
 # X_train, X_test = np.expand_dims(X_train, 1) / 255.0, np.expand_dims(X_test, 1) / 255.0 
 X_train, X_test = X_train / 255.0, X_test / 255.0 
-train = True
+train = False
 
 if __name__ == "__main__":
   if train:
@@ -108,7 +118,58 @@ if __name__ == "__main__":
   else:
     mod = load_module("examples/mnist_vae.pkl")
     mod.eval()
-    gaus = Tensor(np.random.normal(0.0, 1.0, size=(1, mod.latent_dim)))
-    img = (mod.decoder(gaus)[0, 0].data * 255).astype(int)
-    plt.imshow(img, cmap="gray")
+
+    '''
+    for i, y in enumerate(y_test):
+      if y == 2:
+        print(i)
+    quit()
+    '''
+
+    one = Tensor(X_test[31:32])
+    # two = Tensor(X_test[1:2])
+    two = Tensor(X_test[512:513])
+    four = Tensor(X_test[95:96])
+    five = Tensor(X_test[23:24])
+    eight = Tensor(X_test[128:129])
+    nine = Tensor(X_test[9:10])
+
+    _, one_l, _ = mod(one)
+    _, two_l, _ = mod(two)
+    _, four_l, _ = mod(four)
+    _, five_l, _ = mod(five)
+    _, eight_l, _ = mod(eight)
+    _, nine_l, _ = mod(nine)
+
+    step_count = 6
+    one_l = one_l.data
+    two_l = two_l.data
+    four_l = four_l.data
+    five_l = five_l.data
+    eight_l = eight_l.data
+    nine_l = nine_l.data
+
+    top_row = [five_l * (1 - i/step_count) + eight_l * (i/step_count) for i in range(step_count)]
+    # bot_row = [one_l * (1 - i/step_count) + nine_l * (i/step_count) for i in range(step_count)]
+    bot_row = [one_l * (1 - i/step_count) + nine_l * (i/step_count) for i in range(step_count)]
+
+    # sequence = []
+    output = np.zeros((6 * 28, 6 * 28))
+
+    for i in range(step_count):
+      for j in range(step_count):
+        mix_l = top_row[i] * (1 - j/step_count) + bot_row[i] * (j/step_count)
+        out = mod.decoder(Tensor(mix_l))
+        img = (out[0].data * 255).astype(np.uint8).reshape(28, 28)
+        # sequence.append(img)
+        output[j*28:(j+1)*28, i*28:(i+1)*28] = img
+
+    # play_sequence(sequence, 2000)
+    plt.imshow(output, cmap="gray")
     plt.show()
+
+    '''
+    gaus = Tensor(np.random.normal(0.0, 1.0, size=(1, mod.latent_dim)))
+    # img = (mod.decoder(gaus)[0, 0].data * 255).astype(int)
+    img = (mod.decoder(gaus)[0].data * 255).astype(int).reshape(28, 28)
+    '''
