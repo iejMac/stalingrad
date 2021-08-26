@@ -75,11 +75,11 @@ X0 = X_train[:20]
 
 X, Y = get_dataset(X0, T)
 loss = nn.MSE()
-DN = DiffNet(kern_size=3)
-# DN = load_module("./examples/diffusion_models/diffnet.pkl")
+# DN = DiffNet(kern_size=3)
+DN = load_module("./examples/diffusion_models/diffnet.pkl")
 opt = optim.Adam(DN.parameters(), lr)
 
-train_module(DN, opt, loss, X, Y, steps=100, batch_size=200)
+# train_module(DN, opt, loss, X, Y, steps=500, batch_size=200)
 # save_module(DN, "./examples/diffusion_models/diffnet.pkl")
 
 xt = np.random.normal(0.0, 1.0, size=X[0:1].shape)
@@ -103,4 +103,4 @@ for t in range(T):
   xt = Tensor(xt_prev)
 
 
-play_sequence(denoised_seq, 100)
+play_sequence(denoised_seq, 10)
