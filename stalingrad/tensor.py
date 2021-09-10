@@ -56,6 +56,8 @@ class Tensor:
     shape = [1 if ax in axis else self.shape[ax] for ax in range(len(self.shape))]
     e_x = self.exp()
     return e_x / (e_x.sum(axis=dist_axes).reshape(shape=shape))
+  def tanh(self):
+    return (2.0 * self).sigmoid() * 2.0 - 1.0
 
 
 class Function:
