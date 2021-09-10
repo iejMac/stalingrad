@@ -6,8 +6,8 @@ from stalingrad.tensor import Tensor
 class Module:
   def __init__(self):
     self.training = True
-  def __call__(self, x):
-    return self.forward(x)
+  def __call__(self, *x):
+    return self.forward(*x)
   def parameters(self, parent="root"):
     params = {}
     for attr in self.__dict__:
