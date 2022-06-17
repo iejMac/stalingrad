@@ -24,6 +24,8 @@ class Tensor:
 
   def __getitem__(self, slices):
     return self.slice(inds=tuple([slices]) if isinstance(slices, (int, slice)) else slices)
+  def __setitem__(self, slices, value):
+    self.data[slices] = value
 
   def backward(self, passed_grad=None):
     if self.func is None:
