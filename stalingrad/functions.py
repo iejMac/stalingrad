@@ -90,6 +90,14 @@ class Reshape(Function):
     x, _ = func.saved_tensors
     return passed_grad.reshape(x.shape)
 
+class Transpose(Function):
+  def forward(func, x, order=(1, 0)):
+    func.save_tensors(order)
+    return x.transpose(order)
+  def backward(func, passed_grad):
+    order, = func.saved_tensors
+    return passed_grad.transpose(order)
+
 class Slice(Function):
   def forward(func, x, inds=None):
     func.save_tensors(x.shape, inds)
