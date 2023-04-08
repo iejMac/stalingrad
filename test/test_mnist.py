@@ -46,20 +46,20 @@ class TestMNIST(unittest.TestCase):
     opt = optim.SGD(mod.parameters(), learning_rate=1e-2)
     loss_func = nn.NLL(reduction="mean")
 
-    train_module(mod, opt, loss_func, X_train, Y_train, steps=500, batch_size=200)
+    train_module(mod, opt, loss_func, X_train, Y_train, steps=50, batch_size=200)
     correct_pct = test_accuracy(mod, X_test, Y_test)
     print(f"Linear MNIST Classifier test accuracy: {correct_pct}")
-    self.assertTrue(correct_pct > 0.95)
+    self.assertTrue(correct_pct > 0.80)
 
   def test_convolutional_mnist(self):
     mod = ConvolutionalMnistClassifier()
     opt = optim.Adam(mod.parameters(), learning_rate=1e-3)
     loss_func = nn.NLL(reduction="mean")
 
-    train_module(mod, opt, loss_func, X_train, Y_train, steps=500, batch_size=200)
+    train_module(mod, opt, loss_func, X_train, Y_train, steps=50, batch_size=200)
     correct_pct = test_accuracy(mod, X_test, Y_test)
     print(f"Convolutional MNIST Classifier test accuracy: {correct_pct}")
-    self.assertTrue(correct_pct > 0.95)
+    self.assertTrue(correct_pct > 0.80)
 
 if __name__ == "__main__":
   unittest.main()

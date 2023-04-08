@@ -15,7 +15,7 @@ setup(
   install_requires=["numpy"],
   packages=(
     find_packages() +
-    find_packages(where="./stalingrad/data")
+    ["requests"]
   ),
   python_requires='>=3.8',
 )
