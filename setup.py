@@ -13,6 +13,9 @@ setup(
   long_description_content_type="text/markdown",
   url="https://github.com/iejMac/stalingrad",
   install_requires=["numpy"],
-  packages=find_packages(),
+  packages=(
+    find_packages() +
+    find_packages(where=./stalingrad/data)
+  ),
   python_requires='>=3.8',
 )
