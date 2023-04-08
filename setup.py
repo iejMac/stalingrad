@@ -12,7 +12,7 @@ setup(
   long_description=long_description,
   long_description_content_type="text/markdown",
   url="https://github.com/iejMac/stalingrad",
-  install_requires=["numpy", "requests"],
+  install_requires=["numpy", "requests", "tiktoken"],
   packages=find_packages(),
   python_requires='>=3.8',
 )
