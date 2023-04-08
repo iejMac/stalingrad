@@ -4,7 +4,8 @@ import numpy as np
 from stalingrad import nn
 from stalingrad import optim
 from stalingrad.tensor import Tensor
-from stalingrad.utils import train_module, test_accuracy, fetch_mnist
+from stalingrad.utils import train_module, test_accuracy
+from stalingrad.data import fetch_mnist
 
 np.random.seed(80085)
 
