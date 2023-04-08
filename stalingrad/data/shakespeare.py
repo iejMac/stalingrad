@@ -3,12 +3,12 @@ tiny shakespeare dataset
 
 code from: https://github.com/karpathy/nanoGPT/tree/master/data/shakespeare
 """
-
 import os
 import requests
 import tiktoken
 import numpy as np
 
+# TODO: needs testing
 def download_shakespeare(data_dir):
   # download the tiny shakespeare dataset
   input_file_path = os.path.join(data_dir, 'input.txt')
