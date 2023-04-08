@@ -1,4 +1,4 @@
-""" """ #TODO add docstring
+"""stalingrad loss functions"""
 
 from stalingrad import Tensor
 from stalingrad.nn import Module

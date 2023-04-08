@@ -66,11 +66,16 @@ class Pow(Function):
 
 class Matmul(Function):
   def forward(func, x, y):
+    print(x.shape, y.shape)
     func.save_tensors(x, y)
     return x @ y
   def backward(func, passed_grad):
     x, y = func.saved_tensors
-    return passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+    print("back")
+    print(x.shape, y.shape)
+    grad1, grad2 = passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+    print(grad1.shape, grad2.shape)
+    return grad1, grad2
 
 class Sum(Function):
   def forward(func, x, axis=None):
