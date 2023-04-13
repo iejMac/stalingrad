@@ -122,7 +122,7 @@ for step in range(steps):
 
   loss = out.sum()
 
-  print(loss)
+  # print(loss)
 
   loss.backward()
   opt.step()

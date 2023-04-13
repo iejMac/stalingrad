@@ -10,10 +10,16 @@ class Linear(Module):
     self.use_bias = use_bias
     self.shape = (in_neurons, out_neurons)
 
-    self.weight = Tensor(np.random.uniform(-1., 1., size=self.shape)/np.sqrt(np.prod(self.shape)).astype(np.float32))
+    self.weight = Tensor(
+      np.random.uniform(-1., 1., size=self.shape)/np.sqrt(np.prod(self.shape)).astype(np.float32),
+      name="linear.weight"
+    )
     self.bias = None
     if use_bias:
-      self.bias = Tensor(np.random.uniform(-1., 1., (1, out_neurons)))
+      self.bias = Tensor(
+        np.random.uniform(-1., 1., (1, out_neurons)),
+        name="linear.bias"
+      )
 
   def forward(self, x):
     result = x @ self.weight

@@ -30,6 +30,10 @@ def unbroadcast(out, in_sh): # https://github.com/geohot/tinygrad/blob/master/ti
   # It's possible to perform operations on tensors of different size f.e. Add((5, 5), (1, 5)) but for the backward
   # pass we need to remember to unbroadcast the output back to (1, 5)
   sum_axis = tuple([i for i in range(len(in_sh)) if in_sh[i]==1 and out.shape[i]>1]) if in_sh != (1,) else None
+  print("IN UNBROAD")
+  print(out.shape)
+  print(in_sh)
+  print(sum_axis)
   return out.sum(axis=sum_axis).reshape(in_sh)
 
 class Add(Function):
@@ -73,7 +77,11 @@ class Matmul(Function):
     x, y = func.saved_tensors
     print("back")
     print(x.shape, y.shape)
-    grad1, grad2 = passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+    grad1 = passed_grad @ np.swapaxes(y, -2, -1)
+    grad2 = np.swapaxes(x, -2, -1) @ passed_grad
+
+    grad1 = unbroadcast(grad1, x.shape)
+    grad2 = unbroadcast(grad2, y.shape)
     print(grad1.shape, grad2.shape)
     return grad1, grad2
 
