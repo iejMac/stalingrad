@@ -33,10 +33,6 @@ def unbroadcast(out, in_sh): # https://github.com/geohot/tinygrad/blob/master/ti
   # NOTE: this might not work when len(out.shape) != len(in_sh)
   # not sure what the correct fix is, for now check Matmul.backward to see how I deal with it
   sum_axis = tuple([i for i in range(len(in_sh)) if in_sh[i]==1 and out.shape[i]>1]) if in_sh != (1,) else None
-  print("IN UNBROAD")
-  print(out.shape)
-  print(in_sh)
-  print(sum_axis)
   return out.sum(axis=sum_axis).reshape(in_sh)
 
 class Add(Function):
@@ -73,7 +69,6 @@ class Pow(Function):
 
 class Matmul(Function):
   def forward(func, x, y):
-    print(x.shape, y.shape)
     func.save_tensors(x, y)
     return x @ y
   def backward(func, passed_grad):

@@ -23,9 +23,6 @@ class Attention(nn.Module):
     B, T, C = x.shape
 
     emb_attn = self.w_attn(x)
-    print(emb_attn.shape)
-    return emb_attn
-    '''
     q = emb_attn[:, :, :self.d_model]
     k = emb_attn[:, :, self.d_model:self.d_model*2]
     v = emb_attn[:, :, self.d_model*2:self.d_model*3]
@@ -34,7 +31,6 @@ class Attention(nn.Module):
 
     # TODO: is * (1/x) faster than /x ??? test it out, might be interesting
     scores = (q @ k.transpose(order=(0, 2, 1))) / math.sqrt(k.shape[-1])
-    return scores
     # TODO: attn masks here
 
     scores = scores.softmax(dist_axes=(1,))
@@ -48,7 +44,6 @@ class Attention(nn.Module):
     y = self.w_proj(y)
 
     return y
-    '''
 
 # TODO: implement
 class Transformer(nn.Module):
@@ -111,18 +106,13 @@ for step in range(steps):
   embs += pos_emb
 
   out = model(embs)
-
-  '''
   logits = lm_head(out)
 
   sm = logits.softmax()
   sm.backward()
   loss = loss_func(sm, tby)
-  '''
 
-  loss = out.sum()
-
-  # print(loss)
+  print(loss)
 
   loss.backward()
   opt.step()
