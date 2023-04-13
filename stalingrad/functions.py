@@ -29,6 +29,8 @@ class Exp(Function):
 def unbroadcast(out, in_sh): # https://github.com/geohot/tinygrad/blob/master/tinygrad/ops_cpu.py (line 65)
   # It's possible to perform operations on tensors of different size f.e. Add((5, 5), (1, 5)) but for the backward
   # pass we need to remember to unbroadcast the output back to (1, 5)
+  # TODO: this might be unreasonable
+  assert len(out.shape) == len(in_sh)
   sum_axis = tuple([i for i in range(len(in_sh)) if in_sh[i]==1 and out.shape[i]>1]) if in_sh != (1,) else None
   return out.sum(axis=sum_axis).reshape(in_sh)
 
@@ -70,7 +72,15 @@ class Matmul(Function):
     return x @ y
   def backward(func, passed_grad):
     x, y = func.saved_tensors
-    return passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+
+    gx, gy = passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
+
+    y_shape = y.shape
+    if len(y.shape) < len(gy.shape):
+      # TODO: are we certain about the position of these 1's?
+      y_shape = [1] * (len(gy.shape) - len(y.shape)) + list(y.shape)
+
+    return unbroadcast(gx, x.shape), unbroadcast(gy, y_shape).reshape(y.shape)
 
 class Sum(Function):
   def forward(func, x, axis=None):
