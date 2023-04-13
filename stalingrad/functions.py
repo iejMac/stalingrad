@@ -65,7 +65,6 @@ class Pow(Function):
     return x**y
   def backward(func, passed_grad):
     x, y = func.saved_tensors
-    print(x.shape, y.shape)
     return unbroadcast(y * (x**(y-1.0)) * passed_grad, x.shape), unbroadcast((x**y) * np.log(x) * passed_grad, y.shape)
 
 class Matmul(Function):
