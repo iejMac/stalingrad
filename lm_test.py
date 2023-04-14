@@ -10,7 +10,6 @@ from stalingrad import optim
 from stalingrad.data import fetch_shakespeare, get_batch
 
 # Define model:
-# TODO: implement
 class MultiHeadAttention(nn.Module):
   def __init__(self, embed_dim, num_heads, context_length):
     super().__init__()
@@ -44,19 +43,32 @@ class MultiHeadAttention(nn.Module):
 
     # TODO: is * (1/x) faster than /x ??? test it out, might be interesting
     scores = (q @ k.transpose(order=(0, 1, 3, 2))) / math.sqrt(k.shape[-1])
-
     scores = self.causal_mask(scores)
     scores = scores.softmax(dist_axes=(3,))
-
     # TODO: attn dropout
-
     y = scores @ v
 
     y = y.transpose(order=(0, 2, 1, 3)).reshape(shape=(B, T, C))
-
+    # TODO: residual dropout
     y = self.w_proj(y)
-
     return y
+
+# TODO: implement
+def LayerNorm(nn.Module):
+  def __init__(self):
+    super().__init__()
+    pass
+  def forward(self, x):
+    return x
+
+# TODO: implement
+def TransformerBlock(nn.Module):
+  def __init__(self):
+    super().__init__()
+    pass
+  def forward(self, x):
+    return x
+
 
 # TODO: implement
 class Transformer(nn.Module):
@@ -64,6 +76,8 @@ class Transformer(nn.Module):
     super().__init__()
   def forward(self, x):
     return x
+
+
 
 
 train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare")
