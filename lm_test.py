@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import tiktoken
+import torch
 
 from matplotlib import pyplot as plt
 
@@ -11,7 +12,7 @@ from stalingrad.data import fetch_shakespeare, get_batch
 
 # Define model:
 class MultiHeadAttention(nn.Module):
-  def __init__(self, embed_dim, num_heads, context_length):
+  def __init__(self, embed_dim, num_heads, context_length, bias=False):
     super().__init__()
     self.embed_dim = embed_dim
     self.num_heads = num_heads
@@ -19,8 +20,8 @@ class MultiHeadAttention(nn.Module):
     self.context_length = context_length
     assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
 
-    self.w_attn = nn.Linear(embed_dim, embed_dim * 3, use_bias=False)
-    self.w_proj = nn.Linear(embed_dim, embed_dim, use_bias=False)
+    self.w_attn = nn.Linear(embed_dim, embed_dim * 3, use_bias=bias)
+    self.w_proj = nn.Linear(embed_dim, embed_dim, use_bias=bias)
 
     # Create causal attention masks
     lower_tri = 1.0 - np.tril(np.ones((1, 1, context_length, context_length)), k=0)
@@ -53,20 +54,61 @@ class MultiHeadAttention(nn.Module):
     y = self.w_proj(y)
     return y
 
-# TODO: implement
-def LayerNorm(nn.Module):
-  def __init__(self):
+
+class LayerNorm(nn.Module):
+  # https://arxiv.org/abs/1607.06450
+  def __init__(self, shape, epsilon=1e-5, bias=False):
     super().__init__()
-    pass
+    self.shape = shape
+    self.epsilon = epsilon
+
+    self.gain = Tensor(np.ones(shape))
+    self.bias = Tensor(np.zeros(shape)) if bias else None
+
   def forward(self, x):
+    # dims = tuple(range(-len(self.shape), 0))
+    dims = tuple([i for i in range(len(self.shape)) if self.shape[i] != 1])
+
+    # TODO: maybe add keepdims
+    normalized_shape = x.shape[:-len(dims)] + (1,) * len(dims)
+
+    mean = x.mean(axis=dims).reshape(shape=normalized_shape)
+    var = (x**2).mean(axis=dims).reshape(shape=normalized_shape) - (mean**2)
+
+    x_norm = self.gain * ((x - mean) / ((var + self.epsilon)**0.5))
+    if self.bias is not None:
+      x_norm += self.bias
+
+    return x_norm
+
+def gelu(x):
+  # https://arxiv.org/abs/1606.08415
+  return 0.5 * x * (1.0 + (math.sqrt(2.0 / math.pi) * (x + 0.044715 * (x**3))).tanh())
+
+class MLP(nn.Module):
+  def __init__(self, embed_dim, mlp_ratio=4, bias=False):
+    super().__init__()
+    # TODO: needs dropout maybe??
+    self.c_fc = nn.Linear(embed_dim, embed_dim * mlp_ratio, use_bias=bias)
+    self.c_proj = nn.Linear(embed_dim * mlp_ratio, embed_dim, use_bias=bias)
+
+  def forward(self, x):
+    x = self.c_fc(x)
+    x = gelu(x)
+    x = self.c_proj(x)
     return x
 
-# TODO: implement
-def TransformerBlock(nn.Module):
-  def __init__(self):
+class TransformerBlock(nn.Module):
+  def __init__(self, embed_dim, num_heads, context_length, bias=False, mlp_ratio=4):
     super().__init__()
-    pass
+    self.ln_1 = LayerNorm((1, 1, embed_dim), bias=bias) # 1, 1, to adjust for not working unbroadcast
+    self.attn = MultiHeadAttention(embed_dim, num_heads, context_length, bias)
+    self.ln_2 = LayerNorm((1, 1, embed_dim), bias=bias)
+    self.mlp = MLP(embed_dim, mlp_ratio, bias)
+
   def forward(self, x):
+    x = x + self.attn(self.ln_1(x))
+    x = x + self.mlp(self.ln_2(x))
     return x
 
 
@@ -76,7 +118,6 @@ class Transformer(nn.Module):
     super().__init__()
   def forward(self, x):
     return x
-
 
 
 
@@ -90,13 +131,17 @@ vocab_size = 50257
 
 # model init and params
 context_length = 7
-embed_dim = 128 # 768
-num_heads = 8
+embed_dim = 32 # 768
+num_heads = 4
+mlp_ratio = 1
+bias = False
 
-model = MultiHeadAttention(
+model = TransformerBlock(
   embed_dim=embed_dim,
   num_heads=num_heads,
   context_length=context_length,
+  bias=bias,
+  mlp_ratio=mlp_ratio,
 )
 
 # TODO: for weight sharing I'm trying init lm_head then tok_emb = lm_head.weight
@@ -123,9 +168,8 @@ opt = optim.Adam(model_params, learning_rate=1e-2)
 
 losses = []
 
-bx, by = get_batch(train_data, context_length, batch_size)
 for step in range(steps):
-  # bx, by = get_batch(train_data, context_length, batch_size)
+  bx, by = get_batch(train_data, context_length, batch_size)
 
   # TODO: just make CrossEntropyLoss, this is getting annoying
   by_oh = np.eye(vocab_size)[by]
