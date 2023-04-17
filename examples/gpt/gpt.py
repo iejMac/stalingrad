@@ -166,20 +166,20 @@ class GPT(nn.Module):
     return x
 
 
-train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare")
+train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare", tokenizer="char")
 
 # training stuff
 steps = 10
-batch_size = 4
+batch_size = 8
 
 # TODO: think about rounding up vocab size to 50304 like karpathy https://github.com/karpathy/nanoGPT/blob/a82b33b525ca9855d705656387698e13eb8e8d4b/train.py#L144
 model_args = {
   "context_length": 4,
-  "vocab_size": 50257,
+  "vocab_size": 65,  # 50257,
   "num_layers": 2,
   "num_heads": 4,
-  "embed_dim": 32,
-  "mlp_ratio": 4,
+  "embed_dim": 64,
+  "mlp_ratio": 2,
   "bias": False,
 }
 
