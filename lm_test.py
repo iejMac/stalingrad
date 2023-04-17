@@ -3,6 +3,7 @@ import numpy as np
 import tiktoken
 import torch
 
+from dataclasses import dataclass
 from matplotlib import pyplot as plt
 
 from stalingrad.tensor import Tensor
@@ -112,13 +113,57 @@ class TransformerBlock(nn.Module):
     return x
 
 
-# TODO: implement
-class Transformer(nn.Module):
-  def __init__(self):
-    super().__init__()
-  def forward(self, x):
-    return x
+@dataclass
+class GPTConfig:
+  context_length: int = 7
+  vocab_size: int = 50257
+  num_layers: int = 2
+  num_heads: int = 4
+  embed_dim: int = 32
+  mlp_ratio: int = 4
+  bias: bool = False
 
+
+class GPT(nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    # TODO: add dropout
+    # TODO: for weight sharing I'm trying init lm_head then tok_emb = lm_head.weight
+    # TODO: check if this even works
+    self.lm_head = nn.Linear(config.embed_dim, config.vocab_size, use_bias=config.bias)
+    # tok_emb = Tensor(np.random.normal(size=(vocab_size, embed_dim))) # token embeddings
+    self.tok_emb = self.lm_head.weight.transpose()
+
+    # TODO: look into rotary positional embeddings
+    # TODO: unbroadcasting is a bit scuffed, if you rmeove the 1 it complains
+    self.pos_emb = Tensor(np.random.normal(size=(1, config.context_length, config.embed_dim))) # learned positional embedding
+
+    self.blocks = []
+    for i in range(config.num_layers):
+      block = TransformerBlock(
+        embed_dim = config.embed_dim,
+        num_heads = config.num_heads,
+        context_length = config.context_length,
+        bias = config.bias,
+        mlp_ratio = config.mlp_ratio,
+      )
+      # TODO: need to make something like ModuleList
+      setattr(self, f"TransformerBlock_{i}", block) # so optimizer can get params
+      self.blocks.append(block)
+
+    ln_f = LayerNorm((1, 1, config.embed_dim), bias=config.bias)
+
+  def forward(self, x):
+    # TODO: maybe we should make Slice function allow passing
+    # in Tensor as inds...
+    x = self.tok_emb[x.data]
+    x += self.pos_emb
+
+    for block in self.blocks:
+      x = block(x)
+
+    x = self.lm_head(x)
+    return x
 
 
 train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare")
@@ -126,40 +171,23 @@ train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare")
 # training stuff
 steps = 10
 batch_size = 4
-# TODO: think about rounding up to 50304 like karpathy https://github.com/karpathy/nanoGPT/blob/a82b33b525ca9855d705656387698e13eb8e8d4b/train.py#L144
-vocab_size = 50257 
 
-# model init and params
-context_length = 7
-embed_dim = 32 # 768
-num_heads = 4
-mlp_ratio = 1
-bias = False
+# TODO: think about rounding up vocab size to 50304 like karpathy https://github.com/karpathy/nanoGPT/blob/a82b33b525ca9855d705656387698e13eb8e8d4b/train.py#L144
+model_args = {
+  "context_length": 4,
+  "vocab_size": 50257,
+  "num_layers": 2,
+  "num_heads": 4,
+  "embed_dim": 32,
+  "mlp_ratio": 4,
+  "bias": False,
+}
 
-model = TransformerBlock(
-  embed_dim=embed_dim,
-  num_heads=num_heads,
-  context_length=context_length,
-  bias=bias,
-  mlp_ratio=mlp_ratio,
-)
-
-# TODO: for weight sharing I'm trying init lm_head then tok_emb = lm_head.weight
-lm_head = nn.Linear(embed_dim, vocab_size, use_bias=False)
-# tok_emb = Tensor(np.random.normal(size=(vocab_size, embed_dim))) # token embeddings
-tok_emb = lm_head.weight.transpose()
-
-# TODO: look into rotary positional embeddings
-# TODO: unbroadcasting is a bit scuffed, if you rmeove the 1 it complains
-pos_emb = Tensor(np.random.normal(size=(1, context_length, embed_dim))) # learned positional embedding
-
-model_params = model.parameters()
-model_params["lm_head.weight"] = lm_head.weight
-model_params["pos_emb"] = pos_emb
+config = GPTConfig(**model_args)
+model = GPT(config)
 
 loss_func = nn.NLL(reduction="mean")
-opt = optim.Adam(model_params, learning_rate=1e-2)
-
+opt = optim.Adam(model.parameters(), learning_rate=1e-2)
 
 # TODO: make init better because things might need to be initialized differently
 # as per the GPT-2 paper
@@ -169,23 +197,14 @@ opt = optim.Adam(model_params, learning_rate=1e-2)
 losses = []
 
 for step in range(steps):
-  bx, by = get_batch(train_data, context_length, batch_size)
-
+  bx, by = get_batch(train_data, config.context_length, batch_size)
   # TODO: just make CrossEntropyLoss, this is getting annoying
-  by_oh = np.eye(vocab_size)[by]
-
+  by_oh = np.eye(config.vocab_size)[by]
   tbx, tby = Tensor(bx), Tensor(by_oh)
 
-  # TODO: maybe we should make Slice function allow passing
-  # in Tensor as inds...
-  embs = tok_emb[tbx.data]
-  embs += pos_emb
-
-  out = model(embs)
-  logits = lm_head(out)
-
+  logits = model(tbx)
   sm = logits.softmax()
-  sm.backward()
+
   loss = loss_func(sm, tby)
 
   # Logging
