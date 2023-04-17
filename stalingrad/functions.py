@@ -73,7 +73,7 @@ class Matmul(Function):
     return x @ y
   def backward(func, passed_grad):
     x, y = func.saved_tensors
-    
+
     gx, gy = passed_grad @ np.swapaxes(y, -2, -1), np.swapaxes(x, -2, -1) @ passed_grad
 
     y_shape = y.shape
