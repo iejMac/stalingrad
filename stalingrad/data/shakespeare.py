@@ -13,7 +13,6 @@ import numpy as np
 def download_shakespeare(data_dir, tokenizer="gpt2"):
   # download the tiny shakespeare dataset
   input_file_path = os.path.join(data_dir, 'input.txt')
-  print(input_file_path)
   if not os.path.exists(input_file_path):
       data_url = 'https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt'
       with open(input_file_path, 'w') as f:
