@@ -1,14 +1,10 @@
 import math
 import numpy as np
-import tiktoken
-import torch
 
 from dataclasses import dataclass
 from matplotlib import pyplot as plt
 
-from stalingrad.tensor import Tensor
-from stalingrad import nn
-from stalingrad import optim
+from stalingrad import Tensor, nn, optim
 from stalingrad.data import fetch_shakespeare, get_batch
 
 # Define model:
