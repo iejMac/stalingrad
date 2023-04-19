@@ -7,6 +7,7 @@ from collections import defaultdict
 
 
 class Device:
+  # gathers information about device ops
   _ops = sorted(os.listdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ops")))
   imports = dict(enumerate([os.path.splitext(x)[0] for x in _ops if x.startswith("ops_")]))
   buffers = {}
