@@ -17,8 +17,10 @@ class Device:
 
 
 class Tensor:
+  ops = defaultdict(dict)
+
   def __init__(self, data, requires_grad=True, name="", device=Device.DEFAULT):
-    self.device, self.data = device, self._move_data(data, device)
+    self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
     self.grad = np.zeros(self.shape) if requires_grad else None
@@ -36,10 +38,10 @@ class Tensor:
       data = data.view(Device.buffers[Device.CPU])
 
     data = data.toCPU().view(Device.buffers[Device.CPU])
-    return Device.buffers[device].fromCPU(data)
+    return Device.buffers[device].fromCPU(data), device
 
   def to(self, device):
-    self.device, self.data = device, self._move_data(self.data, device)
+    self.data, self.device = self._move_data(self.data, device)
     return
 
   @property
@@ -109,15 +111,19 @@ class Function:
   def apply(self, *x, **kwargs):
     func = self(*x)
     ret = Tensor(self.forward(func, *[t.data for t in x], **kwargs),
-                 requires_grad=any([t.requires_grad for t in x]))
+                 requires_grad=any([t.requires_grad for t in x]), device=func.device)
     if ret.requires_grad:
       ret.func = func
     return ret
     
-def register_operations(name, func):
+def register_operations(name, func, device):
+  Tensor.ops[device][name] = func
   def compute(*x, **kwargs):
-    x = [Tensor(np.array([arg]), requires_grad=False) if not isinstance(arg, Tensor) else arg for arg in x]
-    return func.apply(func, *x, **kwargs)
+    tsr = [arg for arg in x if isinstance(arg, Tensor)][0] # first tensor in args
+    x = [Tensor(np.array([arg]), requires_grad=False, device=tsr.device) if not isinstance(arg, Tensor) else arg for arg in x]
+    f = Tensor.ops[tsr.device][name]
+    f.device = tsr.device
+    return f.apply(f, *x, **kwargs)
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
     setattr(Tensor, f"__{name}__", compute)
@@ -128,7 +134,7 @@ def _register_operations(namespace, device):
     if name.endswith("Buffer"):
       Device.buffers[device] = cls
     elif name != "Function":
-      register_operations(name.lower(), cls)
+      register_operations(name.lower(), cls, device)
 
 
 import importlib
