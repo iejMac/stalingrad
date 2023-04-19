@@ -15,7 +15,7 @@ jobs:
       with:
         python-version: 3.8
     - name: Install Dependencies
-      run: python setup.py install
+      run: pip install -e .
     - name: Test Variable
       run: python test/test_variable.py
     - name: Test Tensor

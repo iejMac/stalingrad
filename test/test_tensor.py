@@ -54,7 +54,7 @@ class TestTensor(unittest.TestCase):
 
     for i, x in enumerate(X_test):
       x = Tensor(x, name="x")
-      y = Tensor(Y_test[i], name="y")
+      y = Tensor(np.array(Y_test[i]), name="y")
 
       h1 = x @ w1
       h2 = h1 @ w2

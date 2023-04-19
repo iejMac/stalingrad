@@ -1,15 +1,49 @@
+import os
+
 import inspect
 import numpy as np
 
 from collections import defaultdict
 
+
+class Device:
+  # gathers information about device ops
+  _ops = sorted(os.listdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ops")))
+  imports = dict(enumerate([os.path.splitext(x)[0] for x in _ops if x.startswith("ops_")]))
+  buffers = {}
+  for i,op in imports.items():
+    name = op[len("ops_"):].upper()
+    vars()[name] = i
+  DEFAULT = CPU
+
+
 class Tensor:
-  def __init__(self, data, requires_grad=True, name=""):
-    self.data = data
+  ops = defaultdict(dict)
+
+  def __init__(self, data, requires_grad=True, name="", device=Device.DEFAULT):
+    self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
     self.grad = np.zeros(self.shape) if requires_grad else None
     self.func = None # Function that created the Tensor
+
+  @staticmethod
+  def _move_data(data, device):
+    if isinstance(device, str):
+      dev_ind = device.split(":")
+      # TODO: ind will be used to specify which GPU in the future
+      dev_type, ind = dev_ind if len(dev_ind) > 1 else dev_ind[0], 0
+      device = getattr(Device, dev_type.upper())
+
+    if isinstance(data, np.ndarray):
+      data = data.view(Device.buffers[Device.CPU])
+
+    data = data.toCPU().view(Device.buffers[Device.CPU])
+    return Device.buffers[device].fromCPU(data), device
+
+  def to(self, device):
+    self.data, self.device = self._move_data(self.data, device)
+    return
 
   @property
   def shape(self):
@@ -78,25 +112,35 @@ class Function:
   def apply(self, *x, **kwargs):
     func = self(*x)
     ret = Tensor(self.forward(func, *[t.data for t in x], **kwargs),
-                 requires_grad=any([t.requires_grad for t in x]))
+                 requires_grad=any([t.requires_grad for t in x]), device=func.device)
     if ret.requires_grad:
       ret.func = func
     return ret
     
-def register_operations(name, func):
+def register_operations(name, func, device):
+  Tensor.ops[device][name] = func
   def compute(*x, **kwargs):
-    x = [Tensor(np.array([arg]), requires_grad=False) if not isinstance(arg, Tensor) else arg for arg in x]
-    return func.apply(func, *x, **kwargs)
+    tsr = [arg for arg in x if isinstance(arg, Tensor)][0] # first tensor in args
+    x = [Tensor(np.array([arg]), requires_grad=False, device=tsr.device) if not isinstance(arg, Tensor) else arg for arg in x]
+    f = Tensor.ops[tsr.device][name]
+    f.device = tsr.device
+    return f.apply(f, *x, **kwargs)
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
     setattr(Tensor, f"__{name}__", compute)
     setattr(Tensor, f"__r{name}__", lambda self, x: compute(x, self))
 
-def _register_operations(namespace):
+def _register_operations(namespace, device):
   for name, cls in inspect.getmembers(namespace, inspect.isclass):
-    if name != "Function":
-      register_operations(name.lower(), cls)
-      
-# import functions
-from stalingrad import functions
-_register_operations(functions)
+    if name.endswith("Buffer"):
+      Device.buffers[device] = cls
+    elif name != "Function":
+      register_operations(name.lower(), cls, device)
+
+
+import importlib
+for d,ops in Device.imports.items():
+  try:
+    _register_operations(importlib.import_module('stalingrad.ops.'+ops), d)
+  except ImportError:
+    pass
