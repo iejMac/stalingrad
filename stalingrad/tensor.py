@@ -17,12 +17,31 @@ class Device:
 
 
 class Tensor:
-  def __init__(self, data, requires_grad=True, name=""):
-    self.data = data
+  def __init__(self, data, requires_grad=True, name="", device=Device.DEFAULT):
+    self.device, self.data = device, self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
     self.grad = np.zeros(self.shape) if requires_grad else None
     self.func = None # Function that created the Tensor
+
+  @staticmethod
+  def _move_data(data, device):
+    if isinstance(device, str):
+      dev_ind = device.split(":")
+      # TODO: ind will be used to specify which GPU in the future
+      dev_type, ind = dev_ind if len(dev_ind) > 1 else dev_ind[0], 0
+      device = getattr(Device, dev_type.upper())
+
+    if isinstance(data, np.ndarray):
+      data = data.view(Device.buffers[Device.CPU])
+
+    data = data.toCPU().view(Device.buffers[Device.CPU])
+    return Device.buffers[device].fromCPU(data)
+
+
+  def to(self, device):
+    self.device, self.data = device, self._move_data(self.data, device)
+    return
 
   @property
   def shape(self):
@@ -107,7 +126,9 @@ def register_operations(name, func):
 
 def _register_operations(namespace, device):
   for name, cls in inspect.getmembers(namespace, inspect.isclass):
-    if name != "Function":
+    if name.endswith("Buffer"):
+      Device.buffers[device] = cls
+    elif name != "Function":
       register_operations(name.lower(), cls)
 
 

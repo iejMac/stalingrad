@@ -1,6 +1,14 @@
 import numpy as np
 from stalingrad.tensor import Function
 
+
+class CPUBuffer(np.ndarray):
+  def fromCPU(data):
+    return data
+  def toCPU(data):
+    return data
+
+
 class ReLU(Function):
   def forward(func, x):
     func.save_tensors(x)
