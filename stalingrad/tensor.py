@@ -1,7 +1,20 @@
+import os
+
 import inspect
 import numpy as np
 
 from collections import defaultdict
+
+
+class Device:
+  _ops = sorted(os.listdir(os.path.join(os.path.dirname(os.path.realpath(__file__)), "ops")))
+  imports = dict(enumerate([os.path.splitext(x)[0] for x in _ops if x.startswith("ops_")]))
+  buffers = {}
+  for i,op in imports.items():
+    name = op[len("ops_"):].upper()
+    vars()[name] = i
+  DEFAULT = CPU
+
 
 class Tensor:
   def __init__(self, data, requires_grad=True, name=""):
@@ -92,11 +105,15 @@ def register_operations(name, func):
     setattr(Tensor, f"__{name}__", compute)
     setattr(Tensor, f"__r{name}__", lambda self, x: compute(x, self))
 
-def _register_operations(namespace):
+def _register_operations(namespace, device):
   for name, cls in inspect.getmembers(namespace, inspect.isclass):
     if name != "Function":
       register_operations(name.lower(), cls)
-      
-# import functions
-from stalingrad import functions
-_register_operations(functions)
+
+
+import importlib
+for d,ops in Device.imports.items():
+  try:
+    _register_operations(importlib.import_module('stalingrad.ops.'+ops), d)
+  except ImportError:
+    pass
