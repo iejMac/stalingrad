@@ -38,7 +38,6 @@ class Tensor:
     data = data.toCPU().view(Device.buffers[Device.CPU])
     return Device.buffers[device].fromCPU(data)
 
-
   def to(self, device):
     self.device, self.data = device, self._move_data(self.data, device)
     return
