@@ -52,7 +52,7 @@ class Tensor:
   def dtype(self):
     return self.data.dtype
   def __repr__(self):
-    return np.array_repr(self.data).replace("array", "Tensor")
+    return self.data.__repr__()
   def assign(self, x):
     self.data = x.data
 

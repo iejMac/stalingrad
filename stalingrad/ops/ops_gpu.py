@@ -19,10 +19,19 @@ init_gpus()
 
 
 class GPUBuffer:
+  def __init__(self, hostbuf):
+    self.shape, self.dtype = hostbuf.shape, hostbuf.dtype
+
+    mf = cl.mem_flags
+    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf)
+  def __repr__(self):
+    return f"GPUBuffer of shape {self.shape}"
   def fromCPU(data):
-    return data
-  def toCPU(data):
-    return data
+    return GPUBuffer(hostbuf=data)
+  def toCPU(self):
+    result = np.empty(self.shape, dtype=self.dtype)
+    cl.enqueue_copy(cl_queue, result, self.buf)
+    return result
 
 
 class ReLU(Function):
