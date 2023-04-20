@@ -24,7 +24,7 @@ class Tensor:
     self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
-    self.grad = np.zeros(self.shape) if requires_grad else None
+    self.grad = np.zeros(self.shape, dtype=np.float32) if requires_grad else None
     self.func = None # Function that created the Tensor
 
   @staticmethod

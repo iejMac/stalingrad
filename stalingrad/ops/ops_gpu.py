@@ -55,6 +55,20 @@ class ReLU(Function):
     return result
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
-    return passed_grad * (x >= 0)
+    result_grad = empty_buf(x.shape, x.dtype)
+    # TODO: for now lets keep grad in numpy array but need to make a PR that changes this
+    grad_buf = GPUBuffer(passed_grad)
+
+    kernel_code = """
+    __kernel void relu_backward(__global const float *input, __global const float *upstream_gradient, __global float *grad_output) {
+        int gid = get_global_id(0);
+        grad_output[gid] = upstream_gradient[gid] * (input[gid] > 0.0f);
+    }
+    """
+    prg = cl.Program(cl_ctx, kernel_code).build()
+    prg.relu_backward(cl_queue, x.shape, None, x.buf, grad_buf.buf, result_grad.buf)
+
+    np_grad = result_grad.toCPU()
+    return np_grad
 
 
