@@ -13,7 +13,6 @@ def init_gpus():
     # TODO: for now lets do 1 GPU
     # TODO: in the future for more devices we can maintain a context and queue for each
     # and pass index info to GPUBuffer
-    # devices = devices[:1]
     devices = [devices[0]]
     cl_ctx = cl.Context(devices)
     cl_queue = cl.CommandQueue(cl_ctx)
