@@ -23,7 +23,7 @@ class GPUBuffer:
     self.shape, self.dtype = hostbuf.shape, hostbuf.dtype
 
     mf = cl.mem_flags
-    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf)
+    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf, size=0)
   def __repr__(self):
     return f"GPUBuffer of shape {self.shape}"
   def fromCPU(data):
@@ -33,11 +33,26 @@ class GPUBuffer:
     cl.enqueue_copy(cl_queue, result, self.buf)
     return result
 
+def empty_buf(shape, dtype=np.float32):
+  data = np.empty(shape, dtype=dtype)
+  buf = GPUBuffer(data)
+  return buf
+
 
 class ReLU(Function):
   def forward(func, x):
     func.save_tensors(x)
-    return np.maximum(x, 0)
+    result = empty_buf(x.shape, x.dtype)
+
+    kernel_code = """
+    __kernel void relu(__global const float *input, __global float *output) {
+        int gid = get_global_id(0);
+        output[gid] = max(0.0f, input[gid]);
+    }
+    """
+    prg = cl.Program(cl_ctx, kernel_code).build()
+    prg.relu(cl_queue, x.shape, None, x.buf, result.buf)
+    return result
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
     return passed_grad * (x >= 0)
