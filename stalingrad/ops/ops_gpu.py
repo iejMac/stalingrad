@@ -41,6 +41,16 @@ def empty_buf(shape, dtype=np.float32):
   return buf
 
 
+def unary_op(code)
+unary_op_kernel = f"""
+__kernel void relu(__global const float *x, __global float *y) {
+    int gid = get_global_id(0);
+    float x = x[gid]
+    y[gid] = {code};
+}
+"""
+# max(0.0f, input[gid]);
+
 # TODO: THIS SHIT IS SO SLOW
 class ReLU(Function):
   def forward(func, x):
@@ -74,4 +84,19 @@ class ReLU(Function):
     np_grad = result_grad.toCPU()
     return np_grad
 
+class Log(Function):
+  def forward(func, x):
+    func.save_tensors(x)
+    return np.log(x)
+  def backward(func, passed_grad):
+    x = func.saved_tensors[0]
+    return passed_grad * 1/x
 
+class Exp(Function):
+  def forward(func, x):
+    ret = np.exp(x)
+    func.save_tensors(ret) # d(e^x)/dx = e^x
+    return ret
+  def backward(func, passed_grad):
+    e_x = func.saved_tensors[0]
+    return passed_grad * e_x
