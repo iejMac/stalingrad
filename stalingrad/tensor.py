@@ -24,7 +24,7 @@ class Tensor:
     self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
-    self.grad = np.zeros(self.shape, dtype=np.float32) if requires_grad else None
+    self.grad = Tensor(np.zeros(self.shape, dtype=np.float32), device=device, requires_grad=False) if requires_grad else None
     self.func = None # Function that created the Tensor
 
   @staticmethod
@@ -66,10 +66,10 @@ class Tensor:
       return
 
     if passed_grad is None: # root call
-      self.grad += np.ones(self.shape, dtype=self.dtype) # df/df = 1
+      self.grad += Tensor(np.ones(self.shape, dtype=self.dtype), device=self.device, requires_grad=False) # df/df = 1
       passed_grad = self.grad
 
-    grads = self.func.backward(self.func, passed_grad)
+    grads = self.func.backward(self.func, passed_grad.data)
     grads = grads if len(self.func.parents) > 1 else [grads]
 
     for p, g in zip(self.func.parents, grads):
