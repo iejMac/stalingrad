@@ -32,7 +32,7 @@ class Tensor:
     if isinstance(device, str):
       dev_ind = device.split(":")
       # TODO: ind will be used to specify which GPU in the future
-      dev_type, ind = dev_ind if len(dev_ind) > 1 else dev_ind[0], 0
+      dev_type, ind = (dev_ind[0], int(dev_ind[1])) if len(dev_ind) > 1 else (dev_ind[0], 0)
       device = getattr(Device, dev_type.upper())
 
     if isinstance(data, np.ndarray):
