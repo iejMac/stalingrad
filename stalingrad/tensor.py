@@ -24,7 +24,7 @@ class Tensor:
     self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
-    self.grad = np.zeros(self.shape) if requires_grad else None
+    self.grad = np.zeros(self.shape, dtype=np.float32) if requires_grad else None
     self.func = None # Function that created the Tensor
 
   @staticmethod
@@ -32,7 +32,7 @@ class Tensor:
     if isinstance(device, str):
       dev_ind = device.split(":")
       # TODO: ind will be used to specify which GPU in the future
-      dev_type, ind = dev_ind if len(dev_ind) > 1 else dev_ind[0], 0
+      dev_type, ind = (dev_ind[0], int(dev_ind[1])) if len(dev_ind) > 1 else (dev_ind[0], 0)
       device = getattr(Device, dev_type.upper())
 
     if isinstance(data, np.ndarray):
@@ -52,7 +52,7 @@ class Tensor:
   def dtype(self):
     return self.data.dtype
   def __repr__(self):
-    return np.array_repr(self.data).replace("array", "Tensor")
+    return self.data.__repr__()
   def assign(self, x):
     self.data = x.data
 

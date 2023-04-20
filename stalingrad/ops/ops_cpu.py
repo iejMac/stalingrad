@@ -15,7 +15,7 @@ class ReLU(Function):
     return np.maximum(x, 0)
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
-    return passed_grad * (x >= 0)
+    return passed_grad * (x > 0)
 
 class Log(Function):
   def forward(func, x):
