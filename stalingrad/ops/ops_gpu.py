@@ -14,7 +14,7 @@ def init_gpus():
     # TODO: in the future for more devices we can maintain a context and queue for each
     # and pass index info to GPUBuffer
     # devices = devices[:1]
-    devices = [devices[5]]
+    devices = [devices[0]]
     cl_ctx = cl.Context(devices)
     cl_queue = cl.CommandQueue(cl_ctx)
 init_gpus()
@@ -41,31 +41,26 @@ def empty_buf(shape, dtype=np.float32):
   return buf
 
 
-def unary_op(code)
-unary_op_kernel = f"""
-__kernel void relu(__global const float *x, __global float *y) {
-    int gid = get_global_id(0);
-    float x = x[gid]
-    y[gid] = {code};
-}
-"""
-# max(0.0f, input[gid]);
+def unary_op(code, x):
+  result = empty_buf(x.shape, x.dtype)
+  unary_op_kernel = """
+    __kernel void unary_op(__global const float *input, __global float *output) {
+      int gid = get_global_id(0);
+      float x = input[gid];
+      output[gid] = """+code+""";
+    }
+  """
+  prg = cl.Program(cl_ctx, unary_op_kernel).build()
+  prg.unary_op(cl_queue, x.shape, None, x.buf, result.buf)
+  return result
+
 
 # TODO: THIS SHIT IS SO SLOW
 class ReLU(Function):
   def forward(func, x):
     func.save_tensors(x)
-    result = empty_buf(x.shape, x.dtype)
+    return unary_op("max(0.0f, x)", x)
 
-    kernel_code = """
-    __kernel void relu(__global const float *input, __global float *output) {
-        int gid = get_global_id(0);
-        output[gid] = max(0.0f, input[gid]);
-    }
-    """
-    prg = cl.Program(cl_ctx, kernel_code).build()
-    prg.relu(cl_queue, x.shape, None, x.buf, result.buf)
-    return result
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
     result_grad = empty_buf(x.shape, x.dtype)
@@ -73,10 +68,10 @@ class ReLU(Function):
     grad_buf = GPUBuffer(passed_grad)
 
     kernel_code = """
-    __kernel void relu_backward(__global const float *input, __global const float *upstream_gradient, __global float *grad_output) {
+      __kernel void relu_backward(__global const float *input, __global const float *upstream_gradient, __global float *grad_output) {
         int gid = get_global_id(0);
         grad_output[gid] = upstream_gradient[gid] * (input[gid] > 0.0f);
-    }
+      }
     """
     prg = cl.Program(cl_ctx, kernel_code).build()
     prg.relu_backward(cl_queue, x.shape, None, x.buf, grad_buf.buf, result_grad.buf)
@@ -87,14 +82,14 @@ class ReLU(Function):
 class Log(Function):
   def forward(func, x):
     func.save_tensors(x)
-    return np.log(x)
+    return unary_op("log(x)", x)
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
     return passed_grad * 1/x
 
 class Exp(Function):
   def forward(func, x):
-    ret = np.exp(x)
+    ret = unary_op("exp(x)", x)
     func.save_tensors(ret) # d(e^x)/dx = e^x
     return ret
   def backward(func, passed_grad):
