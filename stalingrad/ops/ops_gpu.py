@@ -53,6 +53,22 @@ def unary_op(code, x):
   prg = cl.Program(cl_ctx, unary_op_kernel).build()
   prg.unary_op(cl_queue, x.shape, None, x.buf, result.buf)
   return result
+def backward_unary_op(code, x, upstream_grad):
+  result_grad = empty_buf(x.shape, x.dtype)
+  # TODO: for now lets keep grad in numpy array but need to make a PR that changes this
+  grad_buf = GPUBuffer(upstream_grad)
+  backward_unary_op_kernel = """
+    __kernel void backward_unary_op(__global const float *input, __global const float *upstream_gradient, __global float *output) {
+      int gid = get_global_id(0);
+      float x = input[gid];
+      float up_grad = upstream_gradient[gid];
+      output[gid] = """+code+""";
+    }
+  """
+  prg = cl.Program(cl_ctx, backward_unary_op_kernel).build()
+  prg.backward_unary_op(cl_queue, x.shape, None, x.buf, grad_buf.buf, result_grad.buf)
+  np_grad = result_grad.toCPU()
+  return np_grad
 
 
 # TODO: THIS SHIT IS SO SLOW
@@ -61,23 +77,9 @@ class ReLU(Function):
     func.save_tensors(x)
     return unary_op("max(0.0f, x)", x)
 
-  def backward(func, passed_grad):
+  def backward(func, passed_grad): # upstream_gradient[gid] * (input[gid] > 0.0f)
     x = func.saved_tensors[0]
-    result_grad = empty_buf(x.shape, x.dtype)
-    # TODO: for now lets keep grad in numpy array but need to make a PR that changes this
-    grad_buf = GPUBuffer(passed_grad)
-
-    kernel_code = """
-      __kernel void relu_backward(__global const float *input, __global const float *upstream_gradient, __global float *grad_output) {
-        int gid = get_global_id(0);
-        grad_output[gid] = upstream_gradient[gid] * (input[gid] > 0.0f);
-      }
-    """
-    prg = cl.Program(cl_ctx, kernel_code).build()
-    prg.relu_backward(cl_queue, x.shape, None, x.buf, grad_buf.buf, result_grad.buf)
-
-    np_grad = result_grad.toCPU()
-    return np_grad
+    return backward_unary_op("up_grad * (x > 0.0f)", x, passed_grad)
 
 class Log(Function):
   def forward(func, x):
@@ -85,7 +87,7 @@ class Log(Function):
     return unary_op("log(x)", x)
   def backward(func, passed_grad):
     x = func.saved_tensors[0]
-    return passed_grad * 1/x
+    return backward_unary_op("up_grad * (1 / x)", x, passed_grad)
 
 class Exp(Function):
   def forward(func, x):
@@ -94,4 +96,4 @@ class Exp(Function):
     return ret
   def backward(func, passed_grad):
     e_x = func.saved_tensors[0]
-    return passed_grad * e_x
+    return backward_unary_op("up_grad * x", e_x, passed_grad)
