@@ -11,6 +11,8 @@ def init_gpus():
     devices = platform.get_devices()
 
     # TODO: for now lets do 1 GPU
+    # TODO: in the future for more devices we can maintain a context and queue for each
+    # and pass index info to GPUBuffer
     # devices = devices[:1]
     devices = [devices[5]]
     cl_ctx = cl.Context(devices)
@@ -39,6 +41,7 @@ def empty_buf(shape, dtype=np.float32):
   return buf
 
 
+# TODO: THIS SHIT IS SO SLOW
 class ReLU(Function):
   def forward(func, x):
     func.save_tensors(x)
