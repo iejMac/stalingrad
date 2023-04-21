@@ -71,6 +71,7 @@ class Tensor:
 
     grads = self.func.backward(self.func, passed_grad.data)
     grads = grads if len(self.func.parents) > 1 else [grads]
+    grads = [Tensor(g, device=self.device, requires_grad=False) for g in grads]
 
     for p, g in zip(self.func.parents, grads):
       if p.requires_grad:
