@@ -32,7 +32,7 @@ class RMSProp(Optimizer):
     super().__init__(parameters)
     self.alpha = alpha
     self.learning_rate = learning_rate
-    self.accumulated_grads = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+    self.accumulated_grads = dict([(key, Tensor(np.zeros(param.shape), device=param.device, requires_grad=False) for key, param in self.parameters.items()])
   def step(self):
     for key, param in self.parameters.items():
       self.accumulated_grads[key] = self.alpha * self.accumulated_grads[key] + (1 - self.alpha) * (param.grad ** 2)
