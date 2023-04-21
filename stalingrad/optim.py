@@ -2,7 +2,6 @@ import numpy as np
 
 from stalingrad import Tensor
 
-# Make more general Optimizer class and have all specific ones inherit
 class Optimizer:
   def __init__(self, parameters):
     self.parameters = {name : param for name, param in parameters.items() if param.requires_grad}

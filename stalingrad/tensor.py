@@ -55,6 +55,7 @@ class Tensor:
     return self.data.__repr__()
   def assign(self, x):
     self.data = x.data
+    return self
 
   def __getitem__(self, slices):
     return self.slice(inds=tuple([slices]) if isinstance(slices, (int, slice)) else slices)
@@ -129,6 +130,7 @@ def register_operations(name, func, device):
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
     setattr(Tensor, f"__{name}__", compute)
+    setattr(Tensor, f"__i{name}__", lambda self, x: self.assign(compute(self, x)))
     setattr(Tensor, f"__r{name}__", lambda self, x: compute(x, self))
 
 def _register_operations(namespace, device):
