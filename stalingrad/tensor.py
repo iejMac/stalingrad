@@ -24,7 +24,7 @@ class Tensor:
     self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
-    self.grad = np.zeros(self.shape, dtype=np.float32) if requires_grad else None
+    self.grad = Tensor(np.zeros(self.shape, dtype=np.float32), device=device, requires_grad=False) if requires_grad else None
     self.func = None # Function that created the Tensor
 
   @staticmethod
@@ -55,6 +55,7 @@ class Tensor:
     return self.data.__repr__()
   def assign(self, x):
     self.data = x.data
+    return self
 
   def __getitem__(self, slices):
     return self.slice(inds=tuple([slices]) if isinstance(slices, (int, slice)) else slices)
@@ -66,11 +67,12 @@ class Tensor:
       return
 
     if passed_grad is None: # root call
-      self.grad += np.ones(self.shape, dtype=self.dtype) # df/df = 1
+      self.grad += Tensor(np.ones(self.shape, dtype=self.dtype), device=self.device, requires_grad=False) # df/df = 1
       passed_grad = self.grad
 
-    grads = self.func.backward(self.func, passed_grad)
+    grads = self.func.backward(self.func, passed_grad.data)
     grads = grads if len(self.func.parents) > 1 else [grads]
+    grads = [Tensor(g, device=self.device, requires_grad=False) for g in grads]
 
     for p, g in zip(self.func.parents, grads):
       if p.requires_grad:
@@ -128,6 +130,7 @@ def register_operations(name, func, device):
   setattr(Tensor, name, compute)
   if name in ["add", "sub", "mul", "matmul", "pow"]:
     setattr(Tensor, f"__{name}__", compute)
+    setattr(Tensor, f"__i{name}__", lambda self, x: self.assign(compute(self, x)))
     setattr(Tensor, f"__r{name}__", lambda self, x: compute(x, self))
 
 def _register_operations(namespace, device):
