@@ -1,4 +1,4 @@
-""" """ # TODO: add docstring
+"""base Module class"""
 
 from stalingrad import Tensor
 
