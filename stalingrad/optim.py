@@ -45,8 +45,8 @@ class Adam(Optimizer): # https://arxiv.org/pdf/1412.6980.pdf
     self.t = 0
     self.b1, self.b2 = beta1, beta2
     self.learning_rate = learning_rate
-    self.acc_s = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
-    self.acc_r = dict([(key, np.zeros(param.shape)) for key, param in self.parameters.items()])
+    self.acc_s = dict([(key, Tensor(np.zeros(param.shape), device=param.device, requires_grad=False)) for key, param in self.parameters.items()])
+    self.acc_r = dict([(key, Tensor(np.zeros(param.shape), device=param.device, requires_grad=False)) for key, param in self.parameters.items()])
   def step(self):
     self.t += 1
     for key, param in self.parameters.items():
