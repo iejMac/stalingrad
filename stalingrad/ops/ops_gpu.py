@@ -96,3 +96,34 @@ class Exp(Function):
   def backward(func, passed_grad):
     e_x = func.saved_tensors[0]
     return backward_unary_op("up_grad * x", e_x, passed_grad)
+
+
+def binary_op():
+	pass
+
+
+
+class Add(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x+y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return unbroadcast(passed_grad, x.shape), unbroadcast(passed_grad, y.shape)
+
+class Sub(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x-y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return unbroadcast(passed_grad, x.shape), unbroadcast(-passed_grad, y.shape)
+
+class Mul(Function):
+  def forward(func, x, y):
+    func.save_tensors(x, y)
+    return x*y
+  def backward(func, passed_grad):
+    x, y = func.saved_tensors
+    return unbroadcast(y*passed_grad, x.shape), unbroadcast(x*passed_grad, y.shape)
+
