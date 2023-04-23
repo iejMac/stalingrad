@@ -40,6 +40,7 @@ def empty_buf(shape, dtype=np.float32):
   buf = GPUBuffer(data)
   return buf
 
+# UNARY OPS #
 
 def unary_op(code, x):
   result = empty_buf(x.shape, x.dtype)
@@ -94,3 +95,36 @@ class Exp(Function):
   def backward(func, passed_grad):
     e_x = func.saved_tensors[0]
     return backward_unary_op("up_grad * x", e_x, passed_grad)
+
+
+# SHAPE OPS #
+
+class Reshape(Function):
+  def forward(func, x, shape=None):
+    func.save_tensors(x.shape) # save old shape
+    ret = GPUBuffer(x.toCPU())
+    ret.shape = shape
+    return ret
+  def backward(func, passed_grad):
+    shape = func.saved_tensors
+    ret_grad = GPUBuffer(passed_grad.toCPU())
+    ret_grad.shape = shape
+    return ret_grad
+
+class Transpose(Function):
+  def forward(func, x, order=(1, 0)):
+    func.save_tensors(order)
+    return x.transpose(order)
+  def backward(func, passed_grad):
+    order, = func.saved_tensors
+    return passed_grad.transpose(order)
+
+class Slice(Function):
+  def forward(func, x, inds=None):
+    func.save_tensors(x.shape, inds)
+    return x[inds]
+  def backward(func, passed_grad):
+    x_shape, inds = func.saved_tensors
+    grad = np.zeros(x_shape)
+    grad[inds] += passed_grad
+    return grad
