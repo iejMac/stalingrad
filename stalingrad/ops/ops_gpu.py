@@ -22,6 +22,7 @@ init_gpus()
 class GPUBuffer:
   def __init__(self, hostbuf):
     self.shape, self.dtype = hostbuf.shape, hostbuf.dtype
+    self.strides = hostbuf.strides
 
     mf = cl.mem_flags
     # GPUBuffer is flat, ops should know how to handle this based on shape info
@@ -102,6 +103,7 @@ class Exp(Function):
 
 class Reshape(Function):
   def forward(func, x, shape=None):
+    assert np.prod(x.shape) == np.prod(shape) # target tensor needs to have same n_elements
     func.save_tensors(x.shape) # save old shape
     ret = GPUBuffer(x)
     ret.shape = shape
@@ -112,13 +114,48 @@ class Reshape(Function):
     ret_grad.shape = shape
     return ret_grad
 
+
+def transpose_op(x, order):
+  res_shape = np.array(x.shape)[np.array(order)]
+  result = empty_buf(res_shape, x.dtype)
+  shape_buf = GPUBuffer(np.array(x.shape).astype(np.int32))
+  order_buf = GPUBuffer(np.array(order).astype(np.int32))
+
+  transpose_op_kernel = """
+		__kernel void transpose_op(__global const float *input, __global float *output,
+															 __global const int *order, __global const int *shape,
+															 int order_len) {
+				int gid = get_global_id(0);
+				int gi = gid;
+				int output_index = 0;
+
+				for (int i = order_len - 1; i >= 0; i--) {
+						int stride = 1;
+						for (int j = order[i] + 1; j < order_len; j++) {
+								stride *= shape[j];
+						}
+						output_index += (gi % shape[order[i]]) * stride;
+						gi /= shape[order[i]];
+				}
+
+				output[gid] = input[output_index];
+		}
+  """
+  prg = cl.Program(cl_ctx, transpose_op_kernel).build()
+  prg.transpose_op(cl_queue, [np.prod(x.shape)], None,
+    x.buf, result.buf,
+    order_buf.buf, shape_buf.buf,
+    np.int32(len(order)),
+  )
+  return result 
+
 class Transpose(Function):
   def forward(func, x, order=(1, 0)):
     func.save_tensors(order)
-    return x.transpose(order)
+    return transpose_op(x, order)
   def backward(func, passed_grad):
     order, = func.saved_tensors
-    return passed_grad.transpose(order)
+    return transpose_op(x, order)
 
 class Slice(Function):
   def forward(func, x, inds=None):
