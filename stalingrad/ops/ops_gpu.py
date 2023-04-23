@@ -25,7 +25,8 @@ class GPUBuffer:
 
     mf = cl.mem_flags
     # GPUBuffer is flat, ops should know how to handle this based on shape info
-    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf.ravel(), size=0)
+    self.buf = hostbuf.buf if isinstance (hostbuf, GPUBuffer) else \
+      cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf.ravel(), size=0)
   def __repr__(self):
     return f"GPUBuffer of shape {self.shape}"
   def fromCPU(data):
@@ -102,12 +103,12 @@ class Exp(Function):
 class Reshape(Function):
   def forward(func, x, shape=None):
     func.save_tensors(x.shape) # save old shape
-    ret = GPUBuffer(x.toCPU())
+    ret = GPUBuffer(x)
     ret.shape = shape
     return ret
   def backward(func, passed_grad):
-    shape = func.saved_tensors
-    ret_grad = GPUBuffer(passed_grad.toCPU())
+    shape = func.saved_tensors[0]
+    ret_grad = GPUBuffer(passed_grad)
     ret_grad.shape = shape
     return ret_grad
 
