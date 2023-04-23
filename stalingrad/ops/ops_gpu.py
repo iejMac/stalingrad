@@ -22,7 +22,6 @@ init_gpus()
 class GPUBuffer:
   def __init__(self, hostbuf):
     self.shape, self.dtype = hostbuf.shape, hostbuf.dtype
-    self.strides = hostbuf.strides
 
     mf = cl.mem_flags
     # GPUBuffer is flat, ops should know how to handle this based on shape info
