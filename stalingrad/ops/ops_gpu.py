@@ -157,12 +157,17 @@ class Transpose(Function):
     order, = func.saved_tensors
     return transpose_op(x, order)
 
+
+# TODO: IMPLEMENT PROPERLY (THIS IS JUST CPU IMPLEM
 class Slice(Function):
   def forward(func, x, inds=None):
     func.save_tensors(x.shape, inds)
-    return x[inds]
+    x = x.toCPU()
+    out_buf = x[inds]
+    return GPUBuffer(out_buf)
   def backward(func, passed_grad):
     x_shape, inds = func.saved_tensors
+    passed_grad = passed_grad.toCPU()
     grad = np.zeros(x_shape)
     grad[inds] += passed_grad
-    return grad
+    return GPUBuffer(grad)

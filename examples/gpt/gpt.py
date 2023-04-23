@@ -17,7 +17,10 @@ class MultiHeadAttention(nn.Module):
     self.context_length = context_length
     assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
 
-    self.w_attn = nn.Linear(embed_dim, embed_dim * 3, use_bias=bias)
+    # self.w_attn = nn.Linear(embed_dim, embed_dim * 3, use_bias=bias)
+    self.w_q = nn.Linear(embed_dim, embed_dim, use_bias=bias)
+    self.w_k = nn.Linear(embed_dim, embed_dim, use_bias=bias)
+    self.w_v = nn.Linear(embed_dim, embed_dim, use_bias=bias)
     self.w_proj = nn.Linear(embed_dim, embed_dim, use_bias=bias)
 
     # Create causal attention masks
@@ -30,10 +33,15 @@ class MultiHeadAttention(nn.Module):
   def forward(self, x):
     B, T, C = x.shape
 
+    ''' SLICE NOT IMPLEMENTED FOR GPU
     emb_attn = self.w_attn(x)
     q = emb_attn[:, :, :self.embed_dim]
     k = emb_attn[:, :, self.embed_dim:self.embed_dim*2]
     v = emb_attn[:, :, self.embed_dim*2:self.embed_dim*3]
+    '''
+    q = self.w_q(x)
+    k = self.w_k(x)
+    v = self.w_v(x)
 
     q = q.reshape(shape=(B, T, self.num_heads, self.head_dim)).transpose(order=(0, 2, 1, 3))
     k = k.reshape(shape=(B, T, self.num_heads, self.head_dim)).transpose(order=(0, 2, 1, 3))
@@ -153,6 +161,7 @@ class GPT(nn.Module):
     # TODO: maybe we should make Slice function allow passing
     # in Tensor as inds...
     x = self.tok_emb[x.data]
+    print(x.shape)
     x += self.pos_emb
 
     for block in self.blocks:
@@ -192,8 +201,8 @@ opt = optim.Adam(model.parameters(), learning_rate=1e-2)
 
 losses = []
 
+bx, by = get_batch(train_data, config.context_length, batch_size)
 for step in range(steps):
-  bx, by = get_batch(train_data, config.context_length, batch_size)
   # TODO: just make CrossEntropyLoss, this is getting annoying
   by_oh = np.eye(config.vocab_size)[by]
   tbx, tby = Tensor(bx), Tensor(by_oh)
