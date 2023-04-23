@@ -25,7 +25,8 @@ class GPUBuffer:
 
     mf = cl.mem_flags
     # GPUBuffer is flat, ops should know how to handle this based on shape info
-    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf.ravel(), size=0)
+    self.buf = hostbuf.buf if isinstance (hostbuf, GPUBuffer) else \
+      cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf.ravel(), size=0)
   def __repr__(self):
     return f"GPUBuffer of shape {self.shape}"
   def fromCPU(data):
@@ -40,6 +41,7 @@ def empty_buf(shape, dtype=np.float32):
   buf = GPUBuffer(data)
   return buf
 
+# UNARY OPS #
 
 def unary_op(code, x):
   result = empty_buf(x.shape, x.dtype)
@@ -132,3 +134,75 @@ class Mul(Function):
     x, y = func.saved_tensors
     return unbroadcast(y*passed_grad, x.shape), unbroadcast(x*passed_grad, y.shape)
 
+# SHAPE OPS #
+
+class Reshape(Function):
+  def forward(func, x, shape=None):
+    assert np.prod(x.shape) == np.prod(shape) # target tensor needs to have same n_elements
+    func.save_tensors(x.shape) # save old shape
+    ret = GPUBuffer(x)
+    ret.shape = shape
+    return ret
+  def backward(func, passed_grad):
+    shape = func.saved_tensors[0]
+    ret_grad = GPUBuffer(passed_grad)
+    ret_grad.shape = shape
+    return ret_grad
+
+
+def transpose_op(x, order):
+  res_shape = np.array(x.shape)[np.array(order)]
+  result = empty_buf(res_shape, x.dtype)
+  shape_buf = GPUBuffer(np.array(x.shape).astype(np.int32))
+  order_buf = GPUBuffer(np.array(order).astype(np.int32))
+
+  transpose_op_kernel = """
+		__kernel void transpose_op(__global const float *input, __global float *output,
+															 __global const int *order, __global const int *shape,
+															 int order_len) {
+				int gid = get_global_id(0);
+				int gi = gid;
+				int output_index = 0;
+
+				for (int i = order_len - 1; i >= 0; i--) {
+						int stride = 1;
+						for (int j = order[i] + 1; j < order_len; j++) {
+								stride *= shape[j];
+						}
+						output_index += (gi % shape[order[i]]) * stride;
+						gi /= shape[order[i]];
+				}
+
+				output[gid] = input[output_index];
+		}
+  """
+  prg = cl.Program(cl_ctx, transpose_op_kernel).build()
+  prg.transpose_op(cl_queue, [np.prod(x.shape)], None,
+    x.buf, result.buf,
+    order_buf.buf, shape_buf.buf,
+    np.int32(len(order)),
+  )
+  return result 
+
+class Transpose(Function):
+  def forward(func, x, order=(1, 0)):
+    func.save_tensors(order)
+    return transpose_op(x, order)
+  def backward(func, passed_grad):
+    order, = func.saved_tensors
+    return transpose_op(x, order)
+
+
+# TODO: IMPLEMENT PROPERLY (THIS IS JUST CPU IMPLEM
+class Slice(Function):
+  def forward(func, x, inds=None):
+    func.save_tensors(x.shape, inds)
+    x = x.toCPU()
+    out_buf = x[inds]
+    return GPUBuffer(out_buf)
+  def backward(func, passed_grad):
+    x_shape, inds = func.saved_tensors
+    passed_grad = passed_grad.toCPU()
+    grad = np.zeros(x_shape)
+    grad[inds] += passed_grad
+    return GPUBuffer(grad)
