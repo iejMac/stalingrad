@@ -24,7 +24,8 @@ class GPUBuffer:
     self.shape, self.dtype = hostbuf.shape, hostbuf.dtype
 
     mf = cl.mem_flags
-    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf, size=0)
+    # GPUBuffer is flat, ops should know how to handle this based on shape info
+    self.buf = cl.Buffer(cl_ctx, mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=hostbuf.ravel(), size=0)
   def __repr__(self):
     return f"GPUBuffer of shape {self.shape}"
   def fromCPU(data):
@@ -50,12 +51,10 @@ def unary_op(code, x):
     }
   """
   prg = cl.Program(cl_ctx, unary_op_kernel).build()
-  prg.unary_op(cl_queue, x.shape, None, x.buf, result.buf)
+  prg.unary_op(cl_queue, [np.prod(x.shape)], None, x.buf, result.buf)
   return result
 def backward_unary_op(code, x, upstream_grad):
   result_grad = empty_buf(x.shape, x.dtype)
-  # TODO: for now lets keep grad in numpy array but need to make a PR that changes this
-  grad_buf = GPUBuffer(upstream_grad)
   backward_unary_op_kernel = """
     __kernel void backward_unary_op(__global const float *input, __global const float *upstream_gradient, __global float *output) {
       int gid = get_global_id(0);
@@ -65,9 +64,8 @@ def backward_unary_op(code, x, upstream_grad):
     }
   """
   prg = cl.Program(cl_ctx, backward_unary_op_kernel).build()
-  prg.backward_unary_op(cl_queue, x.shape, None, x.buf, grad_buf.buf, result_grad.buf)
-  np_grad = result_grad.toCPU()
-  return np_grad
+  prg.backward_unary_op(cl_queue, [np.prod(x.shape)], None, x.buf, passed_grad.buf, result_grad.buf)
+  return result_grad
 
 
 # TODO: THIS SHIT IS SO SLOW
