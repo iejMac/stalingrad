@@ -95,11 +95,18 @@ class Exp(Function):
     e_x = func.saved_tensors[0]
     return backward_unary_op("up_grad * x", e_x, passed_grad)
 
-
-def binary_op():
-	pass
-
-
+def binary_op(code, x, y):
+  result = empty_buf(x.shape, x.dtype)
+  unary_op_kernel = """
+    __kernel void unary_op(__global const float *input, __global float *output) {
+      int gid = get_global_id(0);
+      float x = input[gid];
+      output[gid] = """+code+""";
+    }
+  """
+  prg = cl.Program(cl_ctx, unary_op_kernel).build()
+  prg.unary_op(cl_queue, [np.prod(x.shape)], None, x.buf, result.buf)
+  return result
 
 class Add(Function):
   def forward(func, x, y):
