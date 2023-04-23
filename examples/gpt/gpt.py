@@ -161,7 +161,6 @@ class GPT(nn.Module):
     # TODO: maybe we should make Slice function allow passing
     # in Tensor as inds...
     x = self.tok_emb[x.data]
-    print(x.shape)
     x += self.pos_emb
 
     for block in self.blocks:
