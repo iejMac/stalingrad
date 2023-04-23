@@ -121,24 +121,24 @@ def transpose_op(x, order):
   order_buf = GPUBuffer(np.array(order).astype(np.int32))
 
   transpose_op_kernel = """
-		__kernel void transpose_op(__global const float *input, __global float *output,
-															 __global const int *order, __global const int *shape,
-															 int order_len) {
-				int gid = get_global_id(0);
-				int gi = gid;
-				int output_index = 0;
+    __kernel void transpose_op(__global const float *input, __global float *output,
+                               __global const int *order, __global const int *shape,
+                               int order_len) {
+        int gid = get_global_id(0);
+        int gi = gid;
+        int output_index = 0;
 
-				for (int i = order_len - 1; i >= 0; i--) {
-						int stride = 1;
-						for (int j = order[i] + 1; j < order_len; j++) {
-								stride *= shape[j];
-						}
-						output_index += (gi % shape[order[i]]) * stride;
-						gi /= shape[order[i]];
-				}
+        for (int i = order_len - 1; i >= 0; i--) {
+            int stride = 1;
+            for (int j = order[i] + 1; j < order_len; j++) {
+                stride *= shape[j];
+            }
+            output_index += (gi % shape[order[i]]) * stride;
+            gi /= shape[order[i]];
+        }
 
-				output[gid] = input[output_index];
-		}
+        output[gid] = input[output_index];
+    }
   """
   prg = cl.Program(cl_ctx, transpose_op_kernel).build()
   prg.transpose_op(cl_queue, [np.prod(x.shape)], None,
@@ -156,7 +156,6 @@ class Transpose(Function):
     order, = func.saved_tensors
     return transpose_op(x, order)
 
-
 # TODO: IMPLEMENT PROPERLY (THIS IS JUST CPU IMPLEM
 class Slice(Function):
   def forward(func, x, inds=None):
@@ -170,3 +169,68 @@ class Slice(Function):
     grad = np.zeros(x_shape)
     grad[inds] += passed_grad
     return GPUBuffer(grad)
+
+
+# REDUCE OPS #
+
+def reduce_op(code, code2, inp, axis=None, start="0.0"):
+  if axis is None:
+    # full reduce
+    osize = [1]*len(inp.shape)
+  else:
+    osize = np.array(inp.shape)
+    osize[list(axis)] = 1
+  ret = empty_buf(osize)
+  if axis is None:
+    ret.shape = (1,)
+
+  # TODO: this is insanely slow
+  reduce_op_kernel = """
+    __kernel void reduce_op(__global const float *a_g, int sz, __global float *res_g, int prod, int n_dims,
+                         __global const int *shape_x, __global const int *shape_ret) {
+      int gid = get_global_id(0);
+      float out = """+start+""";
+      for (int x = 0; x < sz; x++) {
+        int idx = 0;  // compute index into a_g
+        int tprod = prod;
+        int tsz = sz;
+        for (int dim = 0; dim < n_dims; dim++) {
+          idx *= shape_x[dim];
+          if (shape_x[dim] == shape_ret[dim]) {   // dim from gid, don't reduce
+            tprod /= shape_x[dim];
+            idx += (gid / tprod) % shape_x[dim];
+          } else {  // dim from x
+            tsz /= shape_x[dim];
+            idx += (x / tsz) % shape_x[dim];
+          }
+        }
+        float a = a_g[idx];
+        """+code+""";
+      }
+      res_g[gid] = """+code2+""";
+    }
+  """
+  prg = cl.Program(cl_ctx, reduce_op_kernel).build()
+
+  prg.reduce_op(cl_queue, [np.prod(osize)], None, inp.buf,
+    np.int32(np.prod(inp.shape)//np.prod(osize)), ret.buf,
+    np.int32(np.prod(osize)), np.int32(len(osize)),
+    GPUBuffer(np.array(inp.shape, dtype=np.int32)).buf,
+    GPUBuffer(np.array(osize, dtype=np.int32)).buf
+  )
+  return ret
+
+class Sum(Function):
+  def forward(func, input, axis=None):
+    if isinstance(axis, int): axis = [axis]
+    func.save_tensors(input, axis)
+    ret = reduce_op("out += a", "out", input, axis=axis)
+    if axis is not None:
+      ret.shape = tuple([input.shape[i] for i in range(len(input.shape)) if i not in axis])
+    return ret
+
+  def backward(func, passed_grad):
+    input, axis = func.saved_tensors
+    shape = [1 if axis is None or i in axis else input.shape[i] for i in range(len(input.shape))]
+    output = GPUBuffer(passed_grad)
+    return binary_op('a+b', output, empty_buf(input.shape))
