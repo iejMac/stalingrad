@@ -97,6 +97,8 @@ class Exp(Function):
     e_x = func.saved_tensors[0]
     return backward_unary_op("up_grad * x", e_x, passed_grad)
 
+# BINARY OPS #
+
 def binary_op(code, x, y):
   result = empty_buf(x.shape, x.dtype)
   unary_op_kernel = """
