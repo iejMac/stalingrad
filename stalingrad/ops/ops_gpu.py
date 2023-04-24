@@ -330,3 +330,60 @@ class Sum(Function):
     shape = [1 if axis is None or i in axis else input.shape[i] for i in range(len(input.shape))]
     output = GPUBuffer(passed_grad)
     return binary_op('a+b', output, empty_buf(input.shape, zero=True))
+
+
+# MATMUL #
+
+class Matmul(Function):
+  def forward(func, input, weight):
+    assert input.shape[-1] == weight.shape[-2]
+    cnt = np.prod(input.shape[0:-2]) if len(input.shape) > 2 else 1
+    isize, msize, osize = np.int32(input.shape[-2]), np.int32(input.shape[-1]), np.int32(weight.shape[-1])
+    ret = empty_buf(list(input.shape[0:-2])+[isize, osize])
+
+    matmul_kernel = """
+      __kernel void matmul(
+        __global const float *input, __global const float *weight, __global float *res,
+        int isize, int is0, int is1, int msize, int ws0, int ws1, int osize
+     ) {
+        int stride = get_global_id(2);
+        int X = get_global_id(0); // isize
+        int Y = get_global_id(1); // osize
+        float ret = 0.0;
+        for (int x = 0; x < msize; x++) {
+          ret += input[X * is0 + x * is1 + isize*msize*stride] *
+            weight[Y * ws0 + x * ws1 + msize*osize*stride];
+        }
+        res[X * osize + Y + isize*osize*stride] = ret;
+      }
+    """
+    prg = cl.Program(cl_ctx, matmul_kernel).build()
+    matmul = prg.__getattr__("matmul")
+    func.save_tensors(input, weight, matmul, cnt)
+
+    # (isize,msize) x (msize,osize) = (isize,osize)
+    matmul(cl_queue, [isize, osize, cnt], None,
+      input.buf, weight.buf, ret.buf, isize,
+      msize, np.int32(1), msize, np.int32(1), osize, osize)
+    return ret
+
+  def backward(func, grad_output):
+    input, weight, matmul, cnt = func.saved_tensors
+    isize, msize, osize = np.int32(input.shape[-2]), np.int32(input.shape[-1]), np.int32(weight.shape[-1])
+
+    grad_input = empty_buf(input.shape)
+    grad_weight = empty_buf(weight.shape)
+
+    # (isize,osize) x (msize,osize) = (isize,msize)
+    matmul(cl_queue, [isize, msize, cnt], None,
+      grad_output.buf, weight.buf, grad_input.buf, isize,
+      osize, np.int32(1), osize, osize, np.int32(1), msize)
+
+    # (isize,msize) x (isize,osize) = (msize,osize)
+    matmul(cl_queue, [msize, osize, cnt], None,
+      input.buf, grad_output.buf, grad_weight.buf, msize,
+      np.int32(1), msize, isize, np.int32(1), osize, osize)
+
+    return grad_input, grad_weight
+
+
