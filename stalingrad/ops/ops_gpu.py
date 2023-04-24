@@ -1,3 +1,4 @@
+import time
 import functools
 import numpy as np
 import pyopencl as cl
@@ -351,12 +352,13 @@ class Matmul(Function):
         int Y = get_global_id(1); // osize
         float ret = 0.0;
         for (int x = 0; x < msize; x++) {
-          ret += input[X * is0 + x * is1 + isize*msize*stride] *
-            weight[Y * ws0 + x * ws1 + msize*osize*stride];
+          ret += input[stride * isize * msize + X * is0 + x * is1] *
+               weight[x * ws0 + Y * ws1];
         }
-        res[X * osize + Y + isize*osize*stride] = ret;
+        res[stride * isize * osize + X * osize + Y] = ret;
       }
     """
+
     prg = cl.Program(cl_ctx, matmul_kernel).build()
     matmul = prg.__getattr__("matmul")
     func.save_tensors(input, weight, matmul, cnt)

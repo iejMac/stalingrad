@@ -1,3 +1,4 @@
+import time
 import math
 import numpy as np
 
@@ -67,8 +68,8 @@ class LayerNorm(nn.Module):
     self.shape = shape
     self.epsilon = epsilon
 
-    self.gain = Tensor(np.ones(shape))
-    self.bias = Tensor(np.zeros(shape)) if bias else None
+    self.gain = Tensor(np.ones(shape).astype(np.float32))
+    self.bias = Tensor(np.zeros(shape).astype(np.float32)) if bias else None
 
   def forward(self, x):
     # dims = tuple(range(-len(self.shape), 0))
@@ -160,8 +161,7 @@ class GPT(nn.Module):
   def forward(self, x):
     # TODO: maybe we should make Slice function allow passing
     # in Tensor as inds...
-    x = self.tok_emb[x.data.toCPU()]
-    # x = Tensor(np.random.random((8, 4, 64)).astype(np.float32), device="cpu")
+    x = self.tok_emb[x.data.toCPU().astype(np.int32)]
     x += self.pos_emb
 
     for block in self.blocks:
@@ -174,7 +174,7 @@ class GPT(nn.Module):
 train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare", tokenizer="char")
 
 # training stuff
-steps = 1
+steps = 10
 batch_size = 8
 device = "gpu"
 
@@ -182,7 +182,7 @@ device = "gpu"
 model_args = {
   "context_length": 4,
   "vocab_size": 65,  # 50257,
-  "num_layers": 2,
+  "num_layers": 1,
   "num_heads": 4,
   "embed_dim": 64,
   "mlp_ratio": 2,
@@ -204,6 +204,7 @@ opt = optim.Adam(model.parameters(), learning_rate=1e-2)
 losses = []
 
 bx, by = get_batch(train_data, config.context_length, batch_size)
+
 for step in range(steps):
   # TODO: just make CrossEntropyLoss, this is getting annoying
   by_oh = np.eye(config.vocab_size)[by]
@@ -228,7 +229,7 @@ for step in range(steps):
   opt.zero_grad()
   '''
 
-
+quit()
 # Plot the loss values
 plt.plot(losses)
 

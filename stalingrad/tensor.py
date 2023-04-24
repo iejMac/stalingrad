@@ -20,7 +20,10 @@ class Device:
 class Tensor:
   ops = defaultdict(dict)
 
-  def __init__(self, data, requires_grad=True, name="", device=Device.DEFAULT):
+  def __init__(self, data, requires_grad=True, dtype=np.float32, name="", device=Device.DEFAULT):
+    # TODO: do we need this? for now it needs to happen
+    if isinstance(data, np.ndarray):
+      data = data.astype(dtype)
     self.data, self.device = self._move_data(data, device)
     self.name = name
     self.requires_grad = requires_grad
