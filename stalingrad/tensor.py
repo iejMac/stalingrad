@@ -37,12 +37,16 @@ class Tensor:
 
     if isinstance(data, np.ndarray):
       data = data.view(Device.buffers[Device.CPU])
+    elif isinstance(data, Device.buffers[device]):
+      return data, device
 
     data = data.toCPU().view(Device.buffers[Device.CPU])
     return Device.buffers[device].fromCPU(data), device
 
   def to(self, device):
     self.data, self.device = self._move_data(self.data, device)
+    if self.requires_grad:
+      self.grad.to(device)
     return
 
   @property
@@ -123,7 +127,7 @@ def register_operations(name, func, device):
   Tensor.ops[device][name] = func
   def compute(*x, **kwargs):
     tsr = [arg for arg in x if isinstance(arg, Tensor)][0] # first tensor in args
-    x = [Tensor(np.array([arg]), requires_grad=False, device=tsr.device) if not isinstance(arg, Tensor) else arg for arg in x]
+    x = [Tensor(np.array([arg], dtype=np.float32), requires_grad=False, device=tsr.device) if not isinstance(arg, Tensor) else arg for arg in x]
     f = Tensor.ops[tsr.device][name]
     f.device = tsr.device
     return f.apply(f, *x, **kwargs)

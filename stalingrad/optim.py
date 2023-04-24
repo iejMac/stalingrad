@@ -7,6 +7,8 @@ class Optimizer:
     self.parameters = {name : param for name, param in parameters.items() if param.requires_grad}
   def zero_grad(self):
     for param in self.parameters.values():
+      # TODO: why not just *= 0.0
+      # is this slower or faster?
       param.grad = Tensor(np.zeros(param.shape), device=param.device, requires_grad=False)
 
 class SGD(Optimizer):
