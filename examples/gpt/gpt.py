@@ -160,7 +160,8 @@ class GPT(nn.Module):
   def forward(self, x):
     # TODO: maybe we should make Slice function allow passing
     # in Tensor as inds...
-    x = self.tok_emb[x.data]
+    x = self.tok_emb[x.data.toCPU()]
+    x = Tensor(np.random.random((8, 4, 64)).astype(np.float32), device="gpu")
     x += self.pos_emb
 
     for block in self.blocks:
@@ -175,6 +176,7 @@ train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare", tokenizer=
 # training stuff
 steps = 10
 batch_size = 8
+device = "gpu"
 
 # TODO: think about rounding up vocab size to 50304 like karpathy https://github.com/karpathy/nanoGPT/blob/a82b33b525ca9855d705656387698e13eb8e8d4b/train.py#L144
 model_args = {
@@ -189,6 +191,7 @@ model_args = {
 
 config = GPTConfig(**model_args)
 model = GPT(config)
+model.to(device)
 
 loss_func = nn.NLL(reduction="mean")
 opt = optim.Adam(model.parameters(), learning_rate=1e-2)
@@ -206,14 +209,20 @@ for step in range(steps):
   by_oh = np.eye(config.vocab_size)[by]
   tbx, tby = Tensor(bx), Tensor(by_oh)
 
+  tbx.to(device)
+  tby.to(device)
+
   logits = model(tbx)
   sm = logits.softmax()
 
   loss = loss_func(sm, tby)
 
+  '''
   # Logging
-  print(f"Step {step}: {loss.data.item()}")
-  losses.append(loss.data.item())
+  l = loss.data.toCPU().item()
+  print(f"Step {step}: {l}")
+  losses.append(l)
+  '''
 
   loss.backward()
   opt.step()
