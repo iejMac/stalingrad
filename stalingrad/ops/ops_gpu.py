@@ -138,7 +138,7 @@ def get_binop_prg(cl_ctx, code, complist):
     float b = y_g["""+idx_exprs[1]+"""];
     res_g[gid0] = """+code+""";\n}""").build()
 
-def binary_op(func, code, x, y):
+def binary_op(code, x, y):
   shape_ret, dimlist, complist = binary_broadcast(x.shape, y.shape)
   prod_list = np.array(dimlist, dtype=np.int32)[-1::-1].cumprod(dtype=np.int32)[-1::-1] # take cumprod from back to front
 
@@ -149,12 +149,12 @@ def binary_op(func, code, x, y):
 
 def unbroadcast(func, out, in_sh):
   sum_axis = [i for i in range(len(in_sh)) if in_sh[i]==1 and out.shape[i]>1] if in_sh != (1,) else None
-  return reduce_op(func, "out += a", "out", out, sum_axis)
+  return reduce_op("out += a", "out", out, sum_axis)
 
 class Add(Function):
   def forward(func, x, y):
     func.save_tensors(x.shape, y.shape)
-    return binary_op(func, 'a+b', x, y)
+    return binary_op('a+b', x, y)
   def backward(func, grad_output):
     grad_x, grad_y = grad_output, grad_output
     shape_x, shape_y = func.saved_tensors
@@ -163,34 +163,34 @@ class Add(Function):
 class Sub(Function):
   def forward(func, x, y):
     func.save_tensors(x.shape, y.shape)
-    return binary_op(func, 'a-b', x, y)
+    return binary_op('a-b', x, y)
   def backward(func, grad_output):
-    grad_x, grad_y = grad_output, unary_op(func, '-a', grad_output)
+    grad_x, grad_y = grad_output, unary_op('-x', grad_output)
     shape_x, shape_y = func.saved_tensors
     return unbroadcast(func, grad_x, shape_x), unbroadcast(func, grad_y, shape_y),
 
 class Mul(Function):
   def forward(func, x, y):
     func.save_tensors(x, y)
-    return binary_op(func, 'a*b', x, y)
+    return binary_op('a*b', x, y)
 
   def backward(func, grad_output):
     x,y = func.saved_tensors
-    grad_x = binary_op(func, 'a*b', y, grad_output)
-    grad_y = binary_op(func, 'a*b', x, grad_output)
+    grad_x = binary_op('a*b', y, grad_output)
+    grad_y = binary_op('a*b', x, grad_output)
     return unbroadcast(func, grad_x, x.shape), unbroadcast(func, grad_y, y.shape),
 
 class Pow(Function):
   def forward(func, x, y):
     func.save_tensors(x, y)
-    return binary_op(func, 'pow(a,b)', x, y)
+    return binary_op('pow(a,b)', x, y)
 
   def backward(func, grad_output):
     x,y = func.saved_tensors
-    grad_x = binary_op(func, 'a*b', grad_output,
-                      binary_op(func, 'b * (pow((float)a, (float)(b-1.0)))', x, y))
-    grad_y = binary_op(func, 'a*b', grad_output,
-                      binary_op(func, 'pow(a, (float)b) * log(a);', x, y))
+    grad_x = binary_op('a*b', grad_output,
+                      binary_op('b * (pow((float)a, (float)(b-1.0)))', x, y))
+    grad_y = binary_op('a*b', grad_output,
+                      binary_op('pow(a, (float)b) * log(a);', x, y))
     return unbroadcast(func, grad_x, x.shape), unbroadcast(func, grad_y, y.shape),
 
 
@@ -329,4 +329,4 @@ class Sum(Function):
     input, axis = func.saved_tensors
     shape = [1 if axis is None or i in axis else input.shape[i] for i in range(len(input.shape))]
     output = GPUBuffer(passed_grad)
-    return binary_op('a+b', output, empty_buf(input.shape))
+    return binary_op('a+b', output, empty_buf(input.shape, zero=True))
