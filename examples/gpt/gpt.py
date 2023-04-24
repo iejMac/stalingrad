@@ -161,7 +161,7 @@ class GPT(nn.Module):
     # TODO: maybe we should make Slice function allow passing
     # in Tensor as inds...
     x = self.tok_emb[x.data.toCPU()]
-    x = Tensor(np.random.random((8, 4, 64)).astype(np.float32), device="gpu")
+    # x = Tensor(np.random.random((8, 4, 64)).astype(np.float32), device="cpu")
     x += self.pos_emb
 
     for block in self.blocks:
@@ -174,7 +174,7 @@ class GPT(nn.Module):
 train_data, val_data = fetch_shakespeare(data_dir="data/shakespeare", tokenizer="char")
 
 # training stuff
-steps = 10
+steps = 1
 batch_size = 8
 device = "gpu"
 
@@ -217,16 +217,16 @@ for step in range(steps):
 
   loss = loss_func(sm, tby)
 
-  '''
   # Logging
   l = loss.data.toCPU().item()
   print(f"Step {step}: {l}")
   losses.append(l)
-  '''
 
+  '''
   loss.backward()
   opt.step()
   opt.zero_grad()
+  '''
 
 
 # Plot the loss values
