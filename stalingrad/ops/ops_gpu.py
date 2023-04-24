@@ -330,6 +330,7 @@ class Sum(Function):
     input, axis = func.saved_tensors
     shape = [1 if axis is None or i in axis else input.shape[i] for i in range(len(input.shape))]
     output = GPUBuffer(passed_grad)
+    output.shape = shape
     return binary_op('a+b', output, empty_buf(input.shape, zero=True))
 
 
