@@ -67,7 +67,7 @@ def backward_unary_op(code, x, upstream_grad):
     }
   """
   prg = cl.Program(cl_ctx, backward_unary_op_kernel).build()
-  prg.backward_unary_op(cl_queue, [np.prod(x.shape)], None, x.buf, passed_grad.buf, result_grad.buf)
+  prg.backward_unary_op(cl_queue, [np.prod(x.shape)], None, x.buf, upstream_grad.buf, result_grad.buf)
   return result_grad
 
 
@@ -250,7 +250,7 @@ class Transpose(Function):
     return transpose_op(x, order)
   def backward(func, passed_grad):
     order, = func.saved_tensors
-    return transpose_op(x, order)
+    return transpose_op(passed_grad, order)
 
 # TODO: IMPLEMENT PROPERLY (THIS IS JUST CPU IMPLEM)
 class Slice(Function):
