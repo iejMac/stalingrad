@@ -15,6 +15,10 @@ class Module:
       elif isinstance(self.__dict__[attr], Module):
         params.update(self.__dict__[attr].parameters(parent + "." + attr))
     return params
+  def to(self, device):
+    params = self.parameters()
+    for name, p in params.items():
+      p.to(device)
   def training(self):
     self.training = True
   def eval(self):
